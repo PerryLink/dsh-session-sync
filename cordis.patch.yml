@@ -1,0 +1,41 @@
+# dsh-session-sync bundle patch: mount the session-sync plugin.
+#
+# Every key below is a Config field (Schemastery schema); invalid values fail
+# the profile load loudly. See README.md "Configuration" for the full table.
+- insert:
+    - id: session-sync
+      name: dsh-session-sync
+      config:
+        enabled: true
+        # backend: git is the only implemented backend; 'git-age' etc. are
+        # reserved for the future end-to-end-encryption seam (fail loud today).
+        backend: git
+        # Root of the DSH session store to mirror ('' = $DSH_HOME/sessions).
+        sessionRoot: ''
+        # Local git worktree that mirrors sessionRoot ('' = $DSH_HOME/dsh-session-sync/repo).
+        repoDir: ''
+        # Required before any pull/push (status works without one).
+        remote: ''
+        branch: main
+        gitBin: git
+        # Auto modes: pull once when the plugin mounts; push after every
+        # closed turn; periodic pull every N minutes (0 = off). Auto runs are
+        # covered by the config grant and never re-confirm.
+        autoPullOnStart: false
+        autoPushOnTurnEnd: false
+        pullIntervalMinutes: 0
+        # Confirmation channel for /sync pull|push and the sync_* tools:
+        # auto (userQuestions first, then approval) · userQuestions · approval.
+        # Read-only surfaces (status/diff/log) never ask.
+        confirmVia: auto
+        # Subprocess tuning: grace period for git kills, per-command timeout,
+        # and the per-stream collected-output cap.
+        graceMs: 10000
+        commandTimeoutMs: 120000
+        maxOutputBytes: 262144
+        # Identity for commits created by the plugin.
+        commitName: dsh-session-sync
+        commitEmail: dsh-session-sync@localhost
+        # Surface switches: register the /sync command and the sync_* tools.
+        registerCommand: true
+        registerTools: true
