@@ -1,6 +1,6 @@
-# dsh-session-sync
-
 <div align="center">
+
+# 🔄 dsh-session-sync
 
 **DeepSeek Harness के लिए क्रॉस-डिवाइस सत्र सिंक — आपके सत्र स्टोर का एक समर्पित git मिरर।**
 

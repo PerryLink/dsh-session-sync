@@ -1,6 +1,6 @@
-# dsh-session-sync
-
 <div align="center">
+
+# 🔄 dsh-session-sync
 
 **DeepSeek Harness 的跨设备会话同步 —— 为你的会话存储建立专用 git 镜像。**
 

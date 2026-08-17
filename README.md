@@ -1,6 +1,6 @@
-# dsh-session-sync
-
 <div align="center">
+
+# 🔄 dsh-session-sync
 
 **Cross-device session sync for DeepSeek Harness — a dedicated git mirror of your session store.**
 
