@@ -94,7 +94,7 @@ try {
   }
 
   // Real behavior: /sync help through the real commands service (no git, no confirmation).
-  const execution = await ctx.commands.execute(agent, '/sync help', new AbortController().signal)
+  const execution = await ctx.commands.execute(agent, '/sync help', [], new AbortController().signal)
   const text = execution?.result?.text ?? ''
   if (!text.includes('sync: usage')) {
     throw new Error(`Loader composition: /sync help returned ${JSON.stringify(execution?.result)}`)
