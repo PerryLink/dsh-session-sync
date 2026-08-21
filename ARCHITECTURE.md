@@ -57,7 +57,7 @@ Fork files are named `<basename>.remote-fork-<UTC timestamp>-<device8>`; mirror 
 
 ## Session events (adaptive gate)
 
-`sync/push`, `sync/pull`, and `sync/conflict` are declared through `SessionEventMap` declaration merging in `types.d.ts`. At runtime the plugin appends one only when either (a) the host's `KNOWN_SESSION_EVENT_TYPES` already includes the type, or (b) the host `Session.append` supports the `ignorable` envelope (`probeIgnorableAppend`). On `0.1.0-rc.6` neither is true, so the gate stays closed and appends are skipped — sessions keep loading. Once a host records the types, appends turn on automatically; the gate is never removed by hand.
+`sync/push`, `sync/pull`, and `sync/conflict` are declared through `SessionEventMap` declaration merging in `types.d.ts`. At runtime the plugin appends one only when either (a) the host's `KNOWN_SESSION_EVENT_TYPES` already includes the type, or (b) the host `Session.append` exposes the `ignorable` envelope (`probeIgnorableAppend`). On `0.1.0-rc.6` and `0.1.0-rc.8` neither is true (rc.8's `append` takes no envelope for non-surface types; `ignorable` is a read-path marker only), so the gate stays closed and appends are skipped — sessions keep loading. Once a host records the types, appends turn on automatically; the gate is never removed by hand.
 
 ## Storage domain
 
