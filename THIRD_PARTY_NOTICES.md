@@ -18,7 +18,7 @@ published tarball; these are install-time dependencies:
 Development-only dependencies (not shipped, used by tests and the typecheck
 gate) add `@deepseek-ai/dsh-commands`, `@deepseek-ai/dsh-llm`, `@deepseek-ai/dsh-storage`,
 `@deepseek-ai/dsh-storage-json`, `@deepseek-ai/dsh-subprocess`, `@deepseek-ai/dsh-user-approval`,
-`@deepseek-ai/dsh-user-questions` at `0.1.0-rc.8`, and `@types/node`.
+`@deepseek-ai/dsh-user-questions` at `0.1.1-rc.2`, and `@types/node`.
 
 At runtime the plugin only talks to the harness services listed as
 peerDependencies; it performs no network requests of its own — all network

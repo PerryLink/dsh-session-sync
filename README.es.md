@@ -24,7 +24,7 @@
 
 | Superficie | Estado |
 |---|---|
-| Harness | DeepSeek Harness `0.1.0-rc.8` |
+| Harness | DeepSeek Harness `0.1.1-rc.2` |
 | Node | `^22.19.0 \|\| >=24.0.0` |
 | Plataformas | Cualquier lugar donde `git` y DSH se ejecuten (espejo basado en git; sin código específico de plataforma) |
 | Modelo | Los modelos solo texto funcionan plenamente; no se requiere visión ni capacidad extra |
@@ -151,14 +151,14 @@ Ejemplo de sobrescritura en tu parche de perfil:
 
 - **Solo backend git.** Los backends de cifrado de extremo a extremo (estilo age/GPG) están reservados pero no implementados; configurar uno falla alto al cargar. Hasta entonces, los bytes de sesión se almacenan sin cifrar en **tu** remoto git — usa un repositorio privado.
 - **Se requiere git.** El plugin necesita el ejecutable `git` y el servicio `subprocess`; sin ellos, las operaciones de sincronización fallan con un motivo claro (los perfiles siguen arrancando).
-- **Eventos de sesión en `0.1.0-rc.6`/`0.1.0-rc.8`.** El harness aún no registra los tipos `sync/*`, por lo que los anexos al registro de sesión se omiten (las sesiones siguen cargando); el plugin los habilita automáticamente una vez que un host registra los tipos o expone el envoltorio `ignorable` en `Session.append`.
+- **Eventos de sesión en `0.1.0-rc.6`/`0.1.0-rc.8`/`0.1.1-rc.2`.** El harness aún no registra los tipos `sync/*`, por lo que los anexos al registro de sesión se omiten (las sesiones siguen cargando); el plugin los habilita automáticamente una vez que un host registra los tipos o expone el envoltorio `ignorable` en `Session.append`.
 - **`approval` entre turnos.** `/sync` se ejecuta entre turnos, donde el canal `approval` no tiene un turno abierto al que adjuntarse; usa `confirmVia: userQuestions` para la sincronización por comando, o impulsa la sincronización mediante las herramientas dentro de un turno.
 
 ## Desarrollo
 
 ```sh
 pnpm install                                       # node ^22.19 || >=24
-pnpm run typecheck && pnpm run typecheck:ci        # tsc --checkJs contra los peers rc.8 publicados
+pnpm run typecheck && pnpm run typecheck:ci        # tsc --checkJs contra los peers 0.1.1-rc.2 publicados
 pnpm test                                          # node --test (6 suites; las suites git se omiten sin git)
 pnpm run verify:self-contained                     # las specs de dependencias resuelven desde el registro
 pnpm run verify:artifacts                          # archivos publicados presentes + index.mjs importable

@@ -59,7 +59,7 @@ export const inject = ['sessions', 'commands', 'storageDomain', 'subprocess']
  * 宿主 append 是否盖章 ignorable 信封（运行时能力探测）。
  * 在全新 detached Context 上构造 SessionStore（绝不接入宿主持久化，探测
  * 会话不落盘）：追加一条带 { ignorable: true } 的探测事件并回读信封标记。
- * rc.6 的 append 静默丢弃未知选项键；rc.8 的 append 对非 surface 类型不接受
+ * rc.6 的 append 静默丢弃未知选项键；rc.8/rc.2 的 append 对非 surface 类型不接受
  * 信封选项（ignorable 只是读取路径的标记）→ 探测事件均无 ignorable →
  * false（门保持关闭）；
  * append 会盖章 ignorable 信封的宿主 → true（sync/* 以 ignorable 落盘）。

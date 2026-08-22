@@ -24,7 +24,7 @@
 
 | 项目 | 状态 |
 |---|---|
-| Harness | DeepSeek Harness `0.1.0-rc.8` |
+| Harness | DeepSeek Harness `0.1.1-rc.2` |
 | Node | `^22.19.0 \|\| >=24.0.0` |
 | 平台 | 任何能运行 `git` 和 DSH 的环境（基于 git 镜像；无平台特定代码） |
 | 模型 | 纯文本模型即可完整支持；无需视觉或额外模型能力 |
@@ -151,14 +151,14 @@ dsh --profile web --dump-config | grep -A2 'id: session-sync'
 
 - **仅 git 后端。** 端到端加密后端（age/GPG 风格）为预留、尚未实现；配置它会响亮失败。在此之前，会话字节以未加密形式存放在**你的** git 远端 —— 请使用私有仓库。
 - **依赖 git。** 插件需要 `git` 可执行文件与 `subprocess` 服务；没有它们时同步操作会给出明确原因失败（profile 仍可启动）。
-- **`0.1.0-rc.6`/`0.1.0-rc.8` 上的会话事件。** harness 尚未收录 `sync/*` 事件类型，因此会话日志追加被跳过（会话仍可加载）；宿主收录类型或 `Session.append` 暴露 `ignorable` 信封后插件会自动开启。
+- **`0.1.0-rc.6`/`0.1.0-rc.8`/`0.1.1-rc.2` 上的会话事件。** harness 尚未收录 `sync/*` 事件类型，因此会话日志追加被跳过（会话仍可加载）；宿主收录类型或 `Session.append` 暴露 `ignorable` 信封后插件会自动开启。
 - **轮次间的 `approval`。** `/sync` 在轮次之间运行，`approval` 通道没有开放轮次可挂靠；请对命令式同步使用 `confirmVia: userQuestions`，或在轮次内经工具驱动同步。
 
 ## 开发
 
 ```sh
 pnpm install                                       # node ^22.19 || >=24
-pnpm run typecheck && pnpm run typecheck:ci        # tsc --checkJs，针对已发布的 rc.8 peers
+pnpm run typecheck && pnpm run typecheck:ci        # tsc --checkJs，针对已发布的 0.1.1-rc.2 peers
 pnpm test                                          # node --test（6 个套件；git 套件在无 git 时跳过）
 pnpm run verify:self-contained                     # 依赖 spec 可从 registry 解析
 pnpm run verify:artifacts                          # 发布文件齐全 + index.mjs 可 import
