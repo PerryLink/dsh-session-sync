@@ -69,7 +69,7 @@ Every automatic behavior is a Cordis effect, so stop/hot-reload removes it:
 
 - `autoPullOnStart` — `ctx.effect` pulls once on mount.
 - `autoPushOnTurnEnd` — `ctx.on('session/event')` pushes after `turn/end`.
-- `pullIntervalMinutes` — `ctx.setInterval` periodic pull.
+- `pullIntervalMinutes` — `ctx.effect` wraps a `setInterval` periodic pull (the disposer clears the timer).
 
 Auto runs are covered by the config grant and never re-confirm.
 

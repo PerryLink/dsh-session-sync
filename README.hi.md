@@ -159,7 +159,7 @@ dsh --profile web --dump-config | grep -A2 'id: session-sync'
 ```sh
 pnpm install                                       # node ^22.19 || >=24
 pnpm run typecheck && pnpm run typecheck:ci        # प्रकाशित 0.1.1-rc.2 peers के विरुद्ध tsc --checkJs
-pnpm test                                          # node --test (6 सुइट; git सुइट बिना git के छोड़े जाते हैं)
+pnpm test                                          # node --test (10 टेस्ट फ़ाइलें; git इंजन सुइट बिना git के छोड़ी जाती है)
 pnpm run verify:self-contained                     # निर्भरता spec रजिस्ट्री से हल होती हैं
 pnpm run verify:artifacts                          # प्रकाशित फ़ाइलें उपस्थित + index.mjs import योग्य
 pnpm run check:readmes                             # पाँच-भाषा README संगतता

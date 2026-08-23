@@ -159,7 +159,7 @@ dsh --profile web --dump-config | grep -A2 'id: session-sync'
 ```sh
 pnpm install                                       # node ^22.19 || >=24
 pnpm run typecheck && pnpm run typecheck:ci        # tsc --checkJs，针对已发布的 0.1.1-rc.2 peers
-pnpm test                                          # node --test（6 个套件；git 套件在无 git 时跳过）
+pnpm test                                          # node --test（10 个测试文件；git 引擎套件在无 git 时跳过）
 pnpm run verify:self-contained                     # 依赖 spec 可从 registry 解析
 pnpm run verify:artifacts                          # 发布文件齐全 + index.mjs 可 import
 pnpm run check:readmes                             # 五语 README 一致性

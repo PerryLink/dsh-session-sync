@@ -160,7 +160,7 @@ Example override in your profile patch:
 ```sh
 pnpm install                                       # node ^22.19 || >=24
 pnpm run typecheck && pnpm run typecheck:ci        # tsc --checkJs against the published 0.1.1-rc.2 peers
-pnpm test                                          # node --test (6 suites; git suites skip without git)
+pnpm test                                          # node --test (10 test files; the engine git suite skips without git)
 pnpm run verify:self-contained                     # dependency specs resolve from the registry
 pnpm run verify:artifacts                          # shipped files present + index.mjs importable
 pnpm run check:readmes                             # five-language README consistency

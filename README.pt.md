@@ -159,7 +159,7 @@ Exemplo de sobrescrita no seu patch de perfil:
 ```sh
 pnpm install                                       # node ^22.19 || >=24
 pnpm run typecheck && pnpm run typecheck:ci        # tsc --checkJs contra os peers 0.1.1-rc.2 publicados
-pnpm test                                          # node --test (6 suites; suites git são omitidas sem git)
+pnpm test                                          # node --test (10 arquivos de teste; a suíte git do motor é omitida sem git)
 pnpm run verify:self-contained                     # as specs de dependência resolvem do registro
 pnpm run verify:artifacts                          # arquivos publicados presentes + index.mjs importável
 pnpm run check:readmes                             # consistência dos cinco README
