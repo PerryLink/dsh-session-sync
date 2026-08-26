@@ -51,8 +51,8 @@ declare module '@deepseek-ai/dsh-session' {
 export interface Config {
   /** 总开关；false 时命令、工具、监听器与自动模式全部卸载。 */
   enabled?: boolean
-  /** 同步后端词汇；只有 'git' 实现，加密后端预留（配置即响亮失败）。 */
-  backend?: 'git'
+  /** 同步后端词汇；`git` 明文、`encrypted` age 加密的 git；对象存储为预留占位（配置即响亮失败）。 */
+  backend?: 'git' | 'encrypted'
   /** 会话存储根；空 = $DSH_HOME/sessions（两者皆缺加载期响亮失败）。 */
   sessionRoot?: string
   /** 同步 git 工作树根；空 = $DSH_HOME/dsh-session-sync/repo。 */
@@ -63,6 +63,12 @@ export interface Config {
   branch?: string
   /** git 可执行路径（默认 'git'）。 */
   gitBin?: string
+  /** age 可执行路径（默认 'age'；backend: encrypted 时探测，缺失降级明文）。 */
+  ageBin?: string
+  /** age 收件人（公钥/身份串；空 = 无法加密，降级明文）。 */
+  ageRecipient?: string
+  /** age 身份文件路径（无口令私钥；空 = 无法解密，降级明文）。 */
+  ageIdentity?: string
   /** 挂载时自动拉取一次（配置即授权，不再确认）。 */
   autoPullOnStart?: boolean
   /** 每个 turn/end 后自动推送（配置即授权，不再确认）。 */
@@ -105,6 +111,7 @@ export interface StatusValue {
   lastPushAt?: number
   lastError?: string
   error?: string
+  warnings?: string[]
 }
 
 /** sync_pull 工具规范结果。 */
@@ -118,6 +125,7 @@ export interface PullValue {
   forks?: string[]
   head?: string
   error?: string
+  warnings?: string[]
 }
 
 /** sync_push 工具规范结果。 */
@@ -129,4 +137,5 @@ export interface PushValue {
   deleted?: number
   remote?: string
   error?: string
+  warnings?: string[]
 }

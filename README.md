@@ -88,12 +88,15 @@ All tunables are Schemastery `Config` fields (changeable from cordis.yml). An id
 | Key | Default | Meaning |
 |---|---|---|
 | `enabled` | `true` | Master switch; `false` unregisters the command, tools, listeners, and auto modes |
-| `backend` | `git` | Sync backend; only `git` is implemented (encrypted backends are reserved and fail loud) |
+| `backend` | `git` | Sync backend: `git` (plaintext mirror) or `encrypted` (age-encrypted mirror content) |
 | `sessionRoot` | `''` | Session store root; empty = `$DSH_HOME/sessions` (both missing fails load) |
 | `repoDir` | `''` | Sync worktree root; empty = `$DSH_HOME/dsh-session-sync/repo` |
 | `remote` | `''` | Remote address (required before pull/push; status/diff work without one) |
 | `branch` | `main` | Remote branch name |
 | `gitBin` | `git` | git executable path |
+| `ageBin` | `age` | age executable path (probed for `backend: encrypted`; missing degrades to plaintext) |
+| `ageRecipient` | `''` | age recipient (public key or identity string); empty = cannot encrypt, degrades to plaintext |
+| `ageIdentity` | `''` | Path to a passphrase-less age secret key for decryption; empty = cannot decrypt, degrades to plaintext |
 | `autoPullOnStart` | `false` | Pull once when the plugin mounts (config is the grant; no re-confirm) |
 | `autoPushOnTurnEnd` | `false` | Push after every closed turn |
 | `pullIntervalMinutes` | `0` | Periodic pull every N minutes (`0` = off, max `10080`) |
@@ -144,14 +147,33 @@ Example override in your profile patch:
 - **Never silently overwrite.** The append-only three-way merge keeps both sides on any divergence; fork files are never deleted, and git never force-pushes, resets, rebases, or switches branches.
 - **Path containment.** Files are mirrored as opaque bytes with symlinks refused and every joined path containment-checked (`PATH_UNSAFE` fails loud).
 - **Sanitized output.** Remote-URL credentials, tokens, and `key=value` secrets are redacted before reaching the model or the log; path display refuses anything outside its root.
-- **No credential storage.** The plugin stores no credentials; git credentials live in your normal git credential helper. The reserved end-to-end-encryption backend is unimplemented and keys never enter the sync repository.
+- **No credential storage.** The plugin stores no credentials; git credentials live in your normal git credential helper. age keys are read from paths you configure (`ageIdentity`); keys never enter the sync repository.
 - **Git hardening.** Git runs with `GIT_TERMINAL_PROMPT=0` and `GIT_OPTIONAL_LOCKS=0`, deadline- and signal-bounded, with a per-stream output cap.
 - **Fail closed.** A missing confirmation answerer, a missing remote, or an unsafe path refuses the operation loudly.
 
+## Encryption & threat model
+
+`backend: encrypted` adds an optional **age** layer above the mirror: session bytes are encrypted into `encrypted/**/*.age` files before they are committed and pushed, and decrypted back to the local plaintext mirror before merging. The three-way merge always runs on plaintext locally, so the append-only keep-both semantics are unchanged.
+
+What the encryption **protects**:
+
+- **Mirror content at rest in the remote.** The session files you push are age ciphertext; the remote host, its operators, and anyone who clones the repository do not see plaintext session bytes without the private key.
+
+What it does **not** protect (the boundary):
+
+- **Keys and age identities are yours to manage.** The recipient/identity files are never shipped, stored, or rotated by the plugin. If a key leaks, the mirror content it protects is exposed. Use a passphrase-less identity and keep it out of the repository.
+- **The remote is still a private repository in practice.** git metadata — commit messages, the `.gitignore`, the `encrypted/` path structure, branch names, and push/fetch activity — remains visible to the remote host. Encryption hides the *content*, not the fact that you sync, nor the shape of your session tree.
+- **Plaintext still exists locally.** The mirror at `<repoDir>/sessions/` is plaintext on disk; encryption protects the transmitted/remote copy, not local disk encryption or the live session store.
+- **graceful degradation means plaintext.** With `backend: encrypted`, if `age` is missing, or `ageRecipient`/`ageIdentity` is empty, the plugin falls back to the plaintext git path **and warns explicitly** in the status/log — it never silently pretends to encrypt. Check `/sync status` for the warning before trusting the remote as encrypted.
+
+Baseline: with `backend: git` (the default), session bytes are stored unencrypted in **your** git remote — use a private repository.
+
 ## Known limitations
 
-- **git backend only.** End-to-end-encryption backends (age/GPG-style) are reserved but not implemented; configuring one fails loudly at load. Until then, session bytes are stored unencrypted in **your** git remote — use a private repository.
+- **Object storage backend reserved.** `object-storage` is an interface placeholder and fails loudly at load; only `git` and `encrypted` are implemented.
 - **git required.** The plugin needs the `git` executable and the `subprocess` service; without them, sync operations fail with a clear reason (profiles keep booting).
+- **age is optional, external.** Encryption depends on the `age` binary on `PATH` (or `ageBin`). No `age` → plaintext fallback with a warning; a passphrase-protected identity cannot be used (decryption would block on a TTY prompt, so it fails closed).
+- **One repoDir per backend.** Switching between `git` and `encrypted` on the same `repoDir` is not supported; use a fresh worktree per backend.
 - **Session events on `0.1.0-rc.6`/`0.1.0-rc.8`/`0.1.1-rc.2`.** The harness does not record `sync/*` event types, so the session-log appends are skipped (sessions keep loading); the plugin enables them automatically once a host records the types or exposes the `ignorable` envelope on `Session.append`.
 - **`approval` between turns.** `/sync` runs between turns, where the `approval` channel has no open turn to attach to; use `confirmVia: userQuestions` for command-driven sync, or drive sync through the tools inside a turn.
 
@@ -160,7 +182,7 @@ Example override in your profile patch:
 ```sh
 pnpm install                                       # node ^22.19 || >=24
 pnpm run typecheck && pnpm run typecheck:ci        # tsc --checkJs against the published 0.1.1-rc.2 peers
-pnpm test                                          # node --test (10 test files; the engine git suite skips without git)
+pnpm test                                          # node --test (12 test files; the engine git suite skips without git)
 pnpm run verify:self-contained                     # dependency specs resolve from the registry
 pnpm run verify:artifacts                          # shipped files present + index.mjs importable
 pnpm run check:readmes                             # five-language README consistency

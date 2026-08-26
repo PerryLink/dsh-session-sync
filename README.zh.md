@@ -87,12 +87,15 @@ dsh --profile web --dump-config | grep -A2 'id: session-sync'
 | 键 | 默认值 | 含义 |
 |---|---|---|
 | `enabled` | `true` | 总开关；`false` 卸载命令、工具、监听器与自动模式 |
-| `backend` | `git` | 同步后端；仅 `git` 已实现（加密后端为预留、配置即响亮失败） |
+| `backend` | `git` | 同步后端：`git`（明文镜像）或 `encrypted`（age 加密镜像内容） |
 | `sessionRoot` | `''` | 会话存储根；空 = `$DSH_HOME/sessions`（两者皆缺加载失败） |
 | `repoDir` | `''` | 同步工作树根；空 = `$DSH_HOME/dsh-session-sync/repo` |
 | `remote` | `''` | 远端地址（pull/push 前必须非空；status/diff 无需） |
 | `branch` | `main` | 远端分支名 |
 | `gitBin` | `git` | git 可执行路径 |
+| `ageBin` | `age` | age 可执行路径（`backend: encrypted` 时探测；缺失降级明文） |
+| `ageRecipient` | `''` | age 收件人（公钥/身份串）；空 = 无法加密、降级明文 |
+| `ageIdentity` | `''` | 无口令 age 私钥文件路径（用于解密）；空 = 无法解密、降级明文 |
 | `autoPullOnStart` | `false` | 插件挂载时拉取一次（配置即授权，不再确认） |
 | `autoPushOnTurnEnd` | `false` | 每个关闭轮次后推送 |
 | `pullIntervalMinutes` | `0` | 每 N 分钟周期拉取（`0` = 关闭，最大 `10080`） |
@@ -159,7 +162,7 @@ dsh --profile web --dump-config | grep -A2 'id: session-sync'
 ```sh
 pnpm install                                       # node ^22.19 || >=24
 pnpm run typecheck && pnpm run typecheck:ci        # tsc --checkJs，针对已发布的 0.1.1-rc.2 peers
-pnpm test                                          # node --test（10 个测试文件；git 引擎套件在无 git 时跳过）
+pnpm test                                          # node --test（12 个测试文件；git 引擎套件在无 git 时跳过）
 pnpm run verify:self-contained                     # 依赖 spec 可从 registry 解析
 pnpm run verify:artifacts                          # 发布文件齐全 + index.mjs 可 import
 pnpm run check:readmes                             # 五语 README 一致性

@@ -21,6 +21,9 @@
 | `lib/merge.mjs` | Append-only three-way merge classification — pure |
 | `lib/mirror.mjs` | Byte mirror from the session store into the worktree (`node:fs`) |
 | `lib/git.mjs` | Git command layer: verb whitelist + argument assertions, never force-push/reset/rebase/branch-switch |
+| `lib/backend.mjs` | Transport backend seam contract + pure `selectEncryptionMode` (backend/mode/warnings selection) |
+| `lib/age.mjs` | age binary probe (`detectAge`) + file-based `ageEncrypt`/`ageDecrypt` (optional external binary, graceful degrade) |
+| `lib/encrypted.mjs` | `EncryptedBackend`: age-encrypted git transport (encrypt-then-push, decrypt-then-merge on plaintext, plaintext fallback) |
 | `lib/engine.mjs` | Sync orchestration: `push` (mirror → commit → push, reconcile-and-retry once on rejection), `pull` (commit → fetch → three-way merge), `status` |
 | `lib/status.mjs` | Read-only status collection (no fetch, no writes) |
 | `lib/render.mjs` | Result text rendering (pure, JSON-safe inputs) |
@@ -83,4 +86,4 @@ Auto runs are covered by the config grant and never re-confirm.
 
 ## Backend vocabulary
 
-`backend: git` is the only implemented backend. End-to-end-encryption backends (age/GPG-style) are reserved; configuring one fails loudly at load, and keys never enter the sync repository.
+`backend: git` is the plaintext mirror transport. `backend: encrypted` wraps the same git transport with an **age** layer above the mirror: the plaintext mirror (`sessions/`) stays local-only (`.gitignore`), each session file is age-encrypted into `encrypted/**/*.age`, and only ciphertext is committed/pushed. Pulls decrypt the remote/base trees back to plaintext and run the same append-only three-way merge locally, then re-encrypt. When `age` is absent or `ageRecipient`/`ageIdentity` is empty, the encrypted backend **degrades to plaintext git** and warns explicitly (status/log) — it never silently claims encryption. `object-storage` is an interface placeholder and fails loud at load.

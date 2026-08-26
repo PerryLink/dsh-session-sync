@@ -87,12 +87,15 @@ Todos os ajustes são campos de `Config` do Schemastery (alteráveis pelo cordis
 | Chave | Padrão | Significado |
 |---|---|---|
 | `enabled` | `true` | Interruptor mestre; `false` remove comando, ferramentas, ouvintes e modos automáticos |
-| `backend` | `git` | Backend de sincronização; somente `git` está implementado (backends criptografados são reservados e falham alto) |
+| `backend` | `git` | Backend de sincronização: `git` (espelho em texto simples) ou `encrypted` (conteúdo do espelho criptografado com age) |
 | `sessionRoot` | `''` | Raiz do armazenamento de sessões; vazio = `$DSH_HOME/sessions` (ambos ausentes falha o carregamento) |
 | `repoDir` | `''` | Raiz da árvore de trabalho; vazio = `$DSH_HOME/dsh-session-sync/repo` |
 | `remote` | `''` | Endereço remoto (obrigatório antes de pull/push; status/diff funcionam sem ele) |
 | `branch` | `main` | Nome da branch remota |
 | `gitBin` | `git` | Caminho do executável git |
+| `ageBin` | `age` | Caminho do executável age (sondado com `backend: encrypted`; se ausente, degrada para texto simples) |
+| `ageRecipient` | `''` | Destinatário age (chave pública ou string de identidade); vazio = não é possível criptografar, degrada para texto simples |
+| `ageIdentity` | `''` | Caminho para uma chave secreta age sem senha (para descriptografar); vazio = degrada para texto simples |
 | `autoPullOnStart` | `false` | Faz pull uma vez quando o plugin monta (a configuração é a concessão; sem reconfirmar) |
 | `autoPushOnTurnEnd` | `false` | Faz push após cada turno fechado |
 | `pullIntervalMinutes` | `0` | Pull periódico a cada N minutos (`0` = desligado, máx. `10080`) |
@@ -159,7 +162,7 @@ Exemplo de sobrescrita no seu patch de perfil:
 ```sh
 pnpm install                                       # node ^22.19 || >=24
 pnpm run typecheck && pnpm run typecheck:ci        # tsc --checkJs contra os peers 0.1.1-rc.2 publicados
-pnpm test                                          # node --test (10 arquivos de teste; a suíte git do motor é omitida sem git)
+pnpm test                                          # node --test (12 arquivos de teste; a suíte git do motor é omitida sem git)
 pnpm run verify:self-contained                     # as specs de dependência resolvem do registro
 pnpm run verify:artifacts                          # arquivos publicados presentes + index.mjs importável
 pnpm run check:readmes                             # consistência dos cinco README

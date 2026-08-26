@@ -49,7 +49,7 @@ LICENSE               Apache-2.0
 ```sh
 pnpm install                                        # node ^22.19 || >=24
 pnpm run typecheck && pnpm run typecheck:ci         # tsc --checkJs (tsconfig.check.json)
-pnpm test                                           # node --test (10 test files; the engine git suite skips without git)
+pnpm test                                           # node --test (12 test files; the engine git suite skips without git)
 pnpm run verify:self-contained                      # dependency specs resolve from the registry
 pnpm run verify:artifacts                           # shipped files present + index.mjs importable
 pnpm run check:readmes                              # five-language README consistency

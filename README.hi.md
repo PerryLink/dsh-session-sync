@@ -87,12 +87,15 @@ dsh --profile web --dump-config | grep -A2 'id: session-sync'
 | कुंजी | डिफ़ॉल्ट | अर्थ |
 |---|---|---|
 | `enabled` | `true` | मास्टर स्विच; `false` कमांड, टूल, लिसनर और स्वचालित मोड हटा देता है |
-| `backend` | `git` | सिंक बैकएंड; केवल `git` लागू है (एन्क्रिप्टेड बैकएंड आरक्षित हैं और तेज़ी से असफल होते हैं) |
+| `backend` | `git` | सिंक बैकएंड: `git` (सादा-पाठ मिरर) या `encrypted` (age-एन्क्रिप्टेड मिरर सामग्री) |
 | `sessionRoot` | `''` | सत्र स्टोर रूट; खाली = `$DSH_HOME/sessions` (दोनों अनुपस्थित होने पर लोड असफल) |
 | `repoDir` | `''` | सिंक वर्कट्री रूट; खाली = `$DSH_HOME/dsh-session-sync/repo` |
 | `remote` | `''` | रिमोट पता (pull/push से पहले आवश्यक; status/diff इसके बिना काम करते हैं) |
 | `branch` | `main` | रिमोट ब्रांच का नाम |
 | `gitBin` | `git` | git एक्ज़ीक्यूटेबल पथ |
+| `ageBin` | `age` | age एक्ज़ीक्यूटेबल पथ (`backend: encrypted` पर जाँचा जाता है; अनुपस्थित होने पर सादे-पाठ पर डाउनग्रेड) |
+| `ageRecipient` | `''` | age प्राप्तकर्ता (सार्वजनिक कुंजी या पहचान स्ट्रिंग); खाली = एन्क्रिप्ट नहीं हो सकता, सादे-पाठ पर डाउनग्रेड |
+| `ageIdentity` | `''` | पासफ़्रेज़-रहित age गुप्त कुंजी का पथ (डिक्रिप्शन के लिए); खाली = सादे-पाठ पर डाउनग्रेड |
 | `autoPullOnStart` | `false` | प्लगइन माउंट होने पर एक बार pull करें (कॉन्फ़िग ही अनुमति है; पुनः पुष्टि नहीं) |
 | `autoPushOnTurnEnd` | `false` | हर बंद टर्न के बाद push करें |
 | `pullIntervalMinutes` | `0` | हर N मिनट में आवधिक pull (`0` = बंद, अधिकतम `10080`) |
@@ -159,7 +162,7 @@ dsh --profile web --dump-config | grep -A2 'id: session-sync'
 ```sh
 pnpm install                                       # node ^22.19 || >=24
 pnpm run typecheck && pnpm run typecheck:ci        # प्रकाशित 0.1.1-rc.2 peers के विरुद्ध tsc --checkJs
-pnpm test                                          # node --test (10 टेस्ट फ़ाइलें; git इंजन सुइट बिना git के छोड़ी जाती है)
+pnpm test                                          # node --test (12 टेस्ट फ़ाइलें; git इंजन सुइट बिना git के छोड़ी जाती है)
 pnpm run verify:self-contained                     # निर्भरता spec रजिस्ट्री से हल होती हैं
 pnpm run verify:artifacts                          # प्रकाशित फ़ाइलें उपस्थित + index.mjs import योग्य
 pnpm run check:readmes                             # पाँच-भाषा README संगतता

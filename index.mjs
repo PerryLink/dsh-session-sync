@@ -45,6 +45,9 @@ import {
 import { assertNestingSafe, resolveRepoDir, resolveSessionRoot } from './lib/paths.mjs'
 import { GitBackend } from './lib/git.mjs'
 import { SyncEngine } from './lib/engine.mjs'
+import { EncryptedBackend, encryptTree, decryptTree, mergeTrees } from './lib/encrypted.mjs'
+import { selectEncryptionMode } from './lib/backend.mjs'
+import { detectAge, ageEncrypt, ageDecrypt } from './lib/age.mjs'
 import { collectStatus } from './lib/status.mjs'
 import { renderDiff, renderPull, renderPush, renderStatus, errorValue } from './lib/render.mjs'
 import { confirmSync, hasOpenTurn, makeEventGate, maybeAppendSessionEvent } from './lib/gate.mjs'
@@ -92,6 +95,9 @@ export function probeIgnorableAppend() {
  * @property {string} [remote] 远端地址（自定义 remote；pull/push 前必须非空，status/diff 不需要）。
  * @property {string} [branch] 远端分支名（默认 main）。
  * @property {string} [gitBin] git 可执行路径（默认 'git'）。
+ * @property {string} [ageBin] age 可执行路径（默认 'age'；backend: encrypted 时探测，缺失降级明文）。
+ * @property {string} [ageRecipient] age 收件人（公钥/身份串；空 = 无法加密，降级明文）。
+ * @property {string} [ageIdentity] age 身份文件路径（无口令私钥；空 = 无法解密，降级明文）。
  * @property {boolean} [autoPullOnStart] 挂载时自动拉取一次（配置即授权，不再确认）。
  * @property {boolean} [autoPushOnTurnEnd] 每个 turn/end 后自动推送（配置即授权）。
  * @property {number} [pullIntervalMinutes] 周期自动拉取间隔分钟（0 = 关闭）。
@@ -112,6 +118,9 @@ export const Config = Schema.object({
   remote: Schema.string().default(DEFAULTS.REMOTE),
   branch: Schema.string().default(DEFAULTS.BRANCH),
   gitBin: Schema.string().default(DEFAULTS.GIT_BIN),
+  ageBin: Schema.string().default(DEFAULTS.AGE_BIN),
+  ageRecipient: Schema.string().default(DEFAULTS.AGE_RECIPIENT),
+  ageIdentity: Schema.string().default(DEFAULTS.AGE_IDENTITY),
   autoPullOnStart: Schema.boolean().default(DEFAULTS.AUTO_PULL_ON_START),
   autoPushOnTurnEnd: Schema.boolean().default(DEFAULTS.AUTO_PUSH_ON_TURN_END),
   pullIntervalMinutes: Schema.number().default(DEFAULTS.PULL_INTERVAL_MINUTES),
@@ -139,6 +148,9 @@ export function resolveConfig(config = {}) {
     remote: config.remote ?? DEFAULTS.REMOTE,
     branch: config.branch ?? DEFAULTS.BRANCH,
     gitBin: config.gitBin ?? DEFAULTS.GIT_BIN,
+    ageBin: config.ageBin ?? DEFAULTS.AGE_BIN,
+    ageRecipient: config.ageRecipient ?? DEFAULTS.AGE_RECIPIENT,
+    ageIdentity: config.ageIdentity ?? DEFAULTS.AGE_IDENTITY,
     autoPullOnStart: config.autoPullOnStart ?? DEFAULTS.AUTO_PULL_ON_START,
     autoPushOnTurnEnd: config.autoPushOnTurnEnd ?? DEFAULTS.AUTO_PUSH_ON_TURN_END,
     pullIntervalMinutes: config.pullIntervalMinutes ?? DEFAULTS.PULL_INTERVAL_MINUTES,
@@ -160,6 +172,15 @@ export function resolveConfig(config = {}) {
   }
   if (typeof resolved.gitBin !== 'string' || resolved.gitBin.length === 0) {
     throw badConfig('gitBin must be a non-empty string')
+  }
+  if (typeof resolved.ageBin !== 'string' || resolved.ageBin.length === 0) {
+    throw badConfig('ageBin must be a non-empty string')
+  }
+  if (typeof resolved.ageRecipient !== 'string') {
+    throw badConfig('ageRecipient must be a string')
+  }
+  if (typeof resolved.ageIdentity !== 'string') {
+    throw badConfig('ageIdentity must be a string')
   }
   if (typeof resolved.branch !== 'string' || resolved.branch.length === 0 || !/^[A-Za-z0-9._/-]+$/u.test(resolved.branch)) {
     throw badConfig('branch must be a non-empty ref-safe string')
@@ -255,6 +276,60 @@ export function makeRunGit(subprocess, opts) {
 }
 
 /**
+ * age runner：ctx.subprocess 上的 collect 封装（与 makeRunGit 同构）。
+ * args 为「含可执行路径的完整 argv」（lib/age.mjs 的 runner 契约），只做文本
+ * 输出收集与退出码/超时/取消语义；age 加解密经文件入参（-o out in），无需 stdin。
+ * @param {import('@deepseek-ai/dsh-subprocess').SubprocessRuntime} subprocess - 宿主子进程服务。
+ * @param {object} opts - {graceMs, commandTimeoutMs, maxOutputBytes}。
+ * @returns {(args: string[], runOpts?: object) => Promise<{code: number, stdout: string, stderr: string}>}
+ */
+export function makeRunAge(subprocess, opts) {
+  return async (args, runOpts = {}) => {
+    const controller = new AbortController()
+    let timedOut = false
+    const timer = setTimeout(() => {
+      timedOut = true
+      controller.abort(new Error(`age ${args[0] ?? ''} timed out after ${opts.commandTimeoutMs}ms`))
+    }, opts.commandTimeoutMs)
+    const onAbort = () => {
+      controller.abort(runOpts.signal?.reason instanceof Error ? runOpts.signal.reason : new Error('sync operation aborted'))
+    }
+    if (runOpts.signal !== undefined) {
+      runOpts.signal.addEventListener('abort', onAbort, { once: true })
+    }
+    try {
+      const executable = await subprocess.resolveExecutable(args[0], undefined, controller.signal)
+      const handle = subprocess.spawn({
+        argv: [executable, ...args.slice(1)],
+        cwd: runOpts.cwd,
+        stdio: {
+          stdin: 'ignore',
+          stdout: { maxBytes: opts.maxOutputBytes },
+          stderr: { maxBytes: opts.maxOutputBytes },
+        },
+        graceMs: opts.graceMs,
+        signal: controller.signal,
+      })
+      const outcome = await handle.done
+      if (timedOut) {
+        throw new Error(`age ${args[0] ?? ''} timed out after ${opts.commandTimeoutMs}ms`)
+      }
+      if (runOpts.signal?.aborted === true) {
+        throw runOpts.signal.reason instanceof Error ? runOpts.signal.reason : new Error('sync operation aborted')
+      }
+      const stdout = handle.collected.stdout.readFrom(0).text
+      const stderr = handle.collected.stderr.readFrom(0).text
+      return { code: outcome.exitCode ?? (outcome.signal !== null ? 128 : 0), stdout, stderr }
+    } finally {
+      clearTimeout(timer)
+      if (runOpts.signal !== undefined) {
+        runOpts.signal.removeEventListener('abort', onAbort)
+      }
+    }
+  }
+}
+
+/**
  * 工具参数/输出描述（双语）。
  */
 const TOOL_TEXT = {
@@ -266,13 +341,13 @@ const TOOL_TEXT = {
 }
 
 /** sync_status 工具规范结果（与工具 schema 同构）。 */
-/** @typedef {{ok: boolean, branch: string, remote: string, head?: string, remoteHead?: string, ahead: number, behind: number, dirty: string[], forks: string[], diffStat: string, mergeInProgress: boolean, lastCommits: string[], lastPullAt?: number, lastPushAt?: number, lastError?: string, error?: string}} StatusValue */
-/** @typedef {{ok: boolean, pulled?: boolean, merged?: boolean, adopted?: number, appended?: number, diverged?: number, forks?: string[], head?: string, error?: string}} PullValue */
-/** @typedef {{ok: boolean, pushed?: boolean, head?: string, mirrored?: number, deleted?: number, remote?: string, error?: string}} PushValue */
+/** @typedef {{ok: boolean, branch: string, remote: string, head?: string, remoteHead?: string, ahead: number, behind: number, dirty: string[], forks: string[], diffStat: string, mergeInProgress: boolean, lastCommits: string[], lastPullAt?: number, lastPushAt?: number, lastError?: string, error?: string, warnings?: string[]}} StatusValue */
+/** @typedef {{ok: boolean, pulled?: boolean, merged?: boolean, adopted?: number, appended?: number, diverged?: number, forks?: string[], head?: string, error?: string, warnings?: string[]}} PullValue */
+/** @typedef {{ok: boolean, pushed?: boolean, head?: string, mirrored?: number, deleted?: number, remote?: string, error?: string, warnings?: string[]}} PushValue */
 
 /**
  * sync_status 工具定义（read-only：不确认、不触网）。
- * @param {SyncEngine} engine - 同步引擎。
+ * @param {{status: () => Promise<object>}} engine - 同步引擎（git 或 encrypted 后端同一 surface）。
  * @param {() => Promise<object>} readMeta - 元数据读取。
  * @returns {object} 工具定义。
  */
@@ -302,6 +377,7 @@ export function makeSyncStatusTool(engine, readMeta) {
           lastPushAt: { type: 'integer' },
           lastError: { type: 'string' },
           error: { type: 'string' },
+          warnings: { type: 'array', items: { type: 'string' } },
         },
       },
       render(_args, value) {
@@ -345,6 +421,7 @@ export function makeSyncPullTool(deps) {
           forks: { type: 'array', items: { type: 'string' } },
           head: { type: 'string' },
           error: { type: 'string' },
+          warnings: { type: 'array', items: { type: 'string' } },
         },
       },
       render(_args, value) {
@@ -403,6 +480,7 @@ export function makeSyncPushTool(deps) {
           deleted: { type: 'integer' },
           remote: { type: 'string' },
           error: { type: 'string' },
+          warnings: { type: 'array', items: { type: 'string' } },
         },
       },
       render(_args, value) {
@@ -530,7 +608,7 @@ export function apply(ctx, config = {}) {
     reportMeta({ lastError: message.slice(0, 500) })
   }
 
-  // --- git 后端 + 引擎。
+  // --- git 后端 + 引擎（backend seam：git = 明文，encrypted = age 加密的 git）。
   const git = new GitBackend({
     repoDir,
     remote: resolved.remote,
@@ -546,7 +624,7 @@ export function apply(ctx, config = {}) {
     timeoutMs: resolved.commandTimeoutMs,
   })
 
-  const engine = new SyncEngine({
+  const engineDeps = {
     git,
     sessionRoot,
     repoDir,
@@ -557,7 +635,21 @@ export function apply(ctx, config = {}) {
     reportError,
     logger,
     onForks: (forkPaths) => handleForks(forkPaths),
-  })
+  }
+  const engine = resolved.backend === BACKENDS.ENCRYPTED
+    ? new EncryptedBackend({
+        ...engineDeps,
+        run: makeRunAge(ctx.subprocess, {
+          graceMs: resolved.graceMs,
+          commandTimeoutMs: resolved.commandTimeoutMs,
+          maxOutputBytes: resolved.maxOutputBytes,
+        }),
+        ageBin: resolved.ageBin,
+        ageRecipient: resolved.ageRecipient,
+        ageIdentity: resolved.ageIdentity,
+        timeoutMs: resolved.commandTimeoutMs,
+      })
+    : new SyncEngine(engineDeps)
   // 设备 id 来自元数据领域；在领域就绪后补齐（fork 命名/设备文件用）。
   void ensureMeta().then((meta) => {
     engine.deviceId = meta.deviceId
@@ -759,6 +851,14 @@ export {
   // 复用/测试面：引擎、后端、纯函数与词汇。
   GitBackend,
   SyncEngine,
+  EncryptedBackend,
+  selectEncryptionMode,
+  detectAge,
+  ageEncrypt,
+  ageDecrypt,
+  encryptTree,
+  decryptTree,
+  mergeTrees,
   collectStatus,
   renderStatus,
   renderDiff,

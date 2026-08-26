@@ -20,8 +20,9 @@
       name: dsh-session-sync
       config:
         enabled: true
-        # backend: git is the only implemented backend; 'git-age' etc. are
-        # reserved for the future end-to-end-encryption seam (fail loud today).
+        # backend: git = plaintext mirror transport; encrypted = age-encrypted
+        # mirror content (encrypt-then-push). 'object-storage' is reserved and
+        # fails loud at load.
         backend: git
         # Root of the DSH session store to mirror ('' = $DSH_HOME/sessions).
         sessionRoot: ''
@@ -31,6 +32,12 @@
         remote: ''
         branch: main
         gitBin: git
+        # age settings for backend: encrypted. ageBin is probed at first use;
+        # missing age / empty ageRecipient / empty ageIdentity degrades to
+        # plaintext git with an explicit warning (never hard-depends on age).
+        ageBin: age
+        ageRecipient: ''
+        ageIdentity: ''
         # Auto modes: pull once when the plugin mounts; push after every
         # closed turn; periodic pull every N minutes (0 = off). Auto runs are
         # covered by the config grant and never re-confirm.
