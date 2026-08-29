@@ -1,6 +1,7 @@
 <div align="center">
 
 # 🔄 dsh-session-sync
+- **1024 商店渠道**：先 `npm i -g dsh1024`，再 `dsh1024 plugin --profile web add dsh-session-sync`（计入 [deepseek1024.com](https://deepseek1024.com) 安装排行）。
 
 **DeepSeek Harness 的跨设备会话同步 —— 为你的会话存储建立专用 git 镜像。**
 
