@@ -147,13 +147,30 @@ Exemplo de sobrescrita no seu patch de perfil:
 - **Nunca sobrescreve em silêncio.** O merge de três vias append-only mantém os dois lados em qualquer divergência; arquivos fork nunca são excluídos e o git nunca força push, reset, rebase ou troca de branch.
 - **Contenção de caminhos.** Os arquivos são espelhados como bytes opacos com links simbólicos recusados e cada caminho unido é verificado por contenção (`PATH_UNSAFE` falha alto).
 - **Saída higienizada.** Credenciais de URL remota, tokens e segredos `key=value` são redigidos antes de chegar ao modelo ou ao registro; a exibição de caminhos recusa tudo fora de sua raiz.
-- **Sem armazenamento de credenciais.** O plugin não armazena credenciais; as credenciais git vivem no seu helper de credenciais normal. O backend de criptografia de ponta a ponta reservado não está implementado e as chaves nunca entram no repositório de sincronização.
+- **Sem armazenamento de credenciais.** O plugin não armazena credenciais; as credenciais git vivem no seu helper de credenciais normal. As identidades/destinatários age são gerenciados por você, e as chaves nunca entram no repositório de sincronização.
 - **Endurecimento do git.** O git roda com `GIT_TERMINAL_PROMPT=0` e `GIT_OPTIONAL_LOCKS=0`, limitado por prazo e sinal, com um limite de saída por fluxo.
 - **Falha fechada.** A ausência de respondedor de confirmação, de remoto ou um caminho inseguro recusa a operação alto.
 
+## Criptografia e modelo de ameaças
+
+`backend: encrypted` adiciona uma camada **age** opcional sobre o espelho: os bytes de sessão são criptografados em arquivos `encrypted/**/*.age` antes de commit e push, e descriptografados de volta ao espelho local em texto simples antes da mesclagem. A mesclagem de três vias sempre roda em texto simples localmente, então a semântica append-only de manter ambos os lados não muda.
+
+O que a criptografia **protege**:
+
+- **O conteúdo do espelho em repouso no remoto.** Os arquivos de sessão que você envia são texto cifrado age; o host remoto, seus operadores e qualquer um que clone o repositório não veem os bytes de sessão em claro sem a chave privada.
+
+O que ela **não** protege (a fronteira):
+
+- **As chaves e identidades age são suas.** Os arquivos de destinatário/identidade nunca são distribuídos, armazenados ou rotacionados pelo plugin. Se uma chave vazar, o conteúdo do espelho que ela protege fica exposto. Use uma identidade sem frase-senha e mantenha-a fora do repositório.
+- **O remoto continua sendo na prática um repositório privado.** Os metadados do git — mensagens de commit, o `.gitignore`, a estrutura de caminhos `encrypted/`, os nomes de branch e a atividade de push/fetch — continuam visíveis para o host remoto. A criptografia esconde o *conteúdo*, não o fato de que você sincroniza, nem a forma da sua árvore de sessões.
+- **O texto simples ainda existe localmente.** O espelho em `<repoDir>/sessions/` é texto simples em disco; a criptografia protege a cópia transmitida/remota, não a criptografia do disco local nem o armazenamento de sessões ao vivo.
+- **Degradação graciosa significa texto simples.** Com `backend: encrypted`, se o `age` estiver ausente, ou `ageRecipient`/`ageIdentity` estiverem vazios, o plugin cai para o caminho git em texto simples **e avisa explicitamente** no status/log — ele nunca finge criptografar. Verifique o aviso em `/sync status` antes de confiar no remoto como criptografado.
+
+Linha de base: com `backend: git` (o padrão), os bytes de sessão são armazenados sem criptografia no **seu** remoto git — use um repositório privado.
+
 ## Limitações conhecidas
 
-- **Somente backend git.** Backends de criptografia de ponta a ponta (estilo age/GPG) estão reservados mas não implementados; configurar um falha alto ao carregar. Até lá, os bytes da sessão são armazenados sem criptografia no **seu** remoto git — use um repositório privado.
+- **A criptografia é opcional.** `backend: encrypted` adiciona uma camada age (veja «Criptografia e modelo de ameaças» acima); se o `age` ou as chaves estiverem ausentes, ele cai para texto simples com um aviso explícito. Com `backend: git` (o padrão), os bytes da sessão são armazenados sem criptografia no **seu** remoto git — use um repositório privado.
 - **git é necessário.** O plugin precisa do executável `git` e do serviço `subprocess`; sem eles, as operações de sincronização falham com um motivo claro (os perfis continuam iniciando).
 - **Eventos de sessão no `0.1.0-rc.6`/`0.1.0-rc.8`/`0.1.1-rc.2`.** O harness ainda não registra os tipos `sync/*`, então os anexos ao registro de sessão são omitidos (as sessões continuam carregando); o plugin os habilita automaticamente quando um host registra os tipos ou expõe o envoltório `ignorable` em `Session.append`.
 - **`approval` entre turnos.** `/sync` roda entre turnos, onde o canal `approval` não tem um turno aberto para se anexar; use `confirmVia: userQuestions` para sincronização por comando, ou conduza a sincronização pelas ferramentas dentro de um turno.
