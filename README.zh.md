@@ -27,7 +27,7 @@
 
 | 项目 | 状态 |
 |---|---|
-| Harness | DeepSeek Harness `0.1.1-rc.2` 0.1.2-alpha.2（2026-08-31 已适配）：会话信封保留 ignorable 字段但仅用于存量日志读取兼容——Session.append 仍无法盖章，门控行为不变。 |
+| Harness | DeepSeek Harness `0.1.1-rc.2` 0.1.2-alpha.3（2026-09-01 已适配）：会话信封保留 ignorable 字段但仅用于存量日志读取兼容——Session.append 仍无法盖章，门控行为不变。 |
 | Node | `^22.19.0 \|\| >=24.0.0` |
 | 平台 | 任何能运行 `git` 和 DSH 的环境（基于 git 镜像；无平台特定代码） |
 | 模型 | 纯文本模型即可完整支持；无需视觉或额外模型能力 |
@@ -174,14 +174,14 @@ dsh --profile web --dump-config | grep -A2 'id: session-sync'
 
 - **加密可选。** `backend: encrypted` 增加一层 age 加密（见上文「加密与威胁模型」）；`age` 或密钥缺失时它会显式告警并降级为明文。`backend: git`（默认）下，会话字节以未加密形式存放在**你的** git 远端 —— 请使用私有仓库。
 - **依赖 git。** 插件需要 `git` 可执行文件与 `subprocess` 服务；没有它们时同步操作会给出明确原因失败（profile 仍可启动）。
-- **`0.1.0-rc.6`/`0.1.0-rc.8`/`0.1.1-rc.2` 上的会话事件。** harness 尚未收录 `sync/*` 事件类型，因此会话日志追加被跳过（会话仍可加载）；宿主收录类型或 `Session.append` 暴露 `ignorable` 信封后插件会自动开启。
+- **`0.1.0-rc.6`/`0.1.0-rc.8`/`0.1.1-rc.2`/`0.1.2-alpha.2`/`0.1.2-alpha.3` 上的会话事件。** harness 尚未收录 `sync/*` 事件类型，因此会话日志追加被跳过（会话仍可加载）；宿主收录类型或 `Session.append` 暴露 `ignorable` 信封后插件会自动开启。
 - **轮次间的 `approval`。** `/sync` 在轮次之间运行，`approval` 通道没有开放轮次可挂靠；请对命令式同步使用 `confirmVia: userQuestions`，或在轮次内经工具驱动同步。
 
 ## 开发
 
 ```sh
 pnpm install                                       # node ^22.19 || >=24
-pnpm run typecheck && pnpm run typecheck:ci        # tsc --checkJs，针对已发布的 0.1.1-rc.2 peers
+pnpm run typecheck && pnpm run typecheck:ci        # tsc --checkJs，针对已发布的 0.1.2-alpha.3 peers
 pnpm test                                          # node --test（12 个测试文件；git 引擎套件在无 git 时跳过）
 pnpm run verify:self-contained                     # 依赖 spec 可从 registry 解析
 pnpm run verify:artifacts                          # 发布文件齐全 + index.mjs 可 import

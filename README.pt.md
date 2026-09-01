@@ -25,7 +25,7 @@
 
 | Superfície | Status |
 |---|---|
-| Harness | DeepSeek Harness `0.1.1-rc.2` 0.1.2-alpha.2 (adaptado em 2026-08-31): o envelope de sessão mantém seu campo ignorable apenas para compatibilidade de leitura de logs armazenados - o Session.append ainda não consegue estampá-lo, então o comportamento da porta não muda. |
+| Harness | DeepSeek Harness `0.1.1-rc.2` 0.1.2-alpha.3 (adaptado em 2026-09-01): o envelope de sessão mantém seu campo ignorable apenas para compatibilidade de leitura de logs armazenados - o Session.append ainda não consegue estampá-lo, então o comportamento da porta não muda. |
 | Node | `^22.19.0 \|\| >=24.0.0` |
 | Plataformas | Qualquer lugar onde `git` e o DSH rodem (espelho baseado em git; sem código específico de plataforma) |
 | Modelo | Modelos somente texto são totalmente suportados; sem necessidade de visão ou capacidade extra |
@@ -172,14 +172,14 @@ Linha de base: com `backend: git` (o padrão), os bytes de sessão são armazena
 
 - **A criptografia é opcional.** `backend: encrypted` adiciona uma camada age (veja «Criptografia e modelo de ameaças» acima); se o `age` ou as chaves estiverem ausentes, ele cai para texto simples com um aviso explícito. Com `backend: git` (o padrão), os bytes da sessão são armazenados sem criptografia no **seu** remoto git — use um repositório privado.
 - **git é necessário.** O plugin precisa do executável `git` e do serviço `subprocess`; sem eles, as operações de sincronização falham com um motivo claro (os perfis continuam iniciando).
-- **Eventos de sessão no `0.1.0-rc.6`/`0.1.0-rc.8`/`0.1.1-rc.2`.** O harness ainda não registra os tipos `sync/*`, então os anexos ao registro de sessão são omitidos (as sessões continuam carregando); o plugin os habilita automaticamente quando um host registra os tipos ou expõe o envoltório `ignorable` em `Session.append`.
+- **Eventos de sessão no `0.1.0-rc.6`/`0.1.0-rc.8`/`0.1.1-rc.2`/`0.1.2-alpha.2`/`0.1.2-alpha.3`.** O harness ainda não registra os tipos `sync/*`, então os anexos ao registro de sessão são omitidos (as sessões continuam carregando); o plugin os habilita automaticamente quando um host registra os tipos ou expõe o envoltório `ignorable` em `Session.append`.
 - **`approval` entre turnos.** `/sync` roda entre turnos, onde o canal `approval` não tem um turno aberto para se anexar; use `confirmVia: userQuestions` para sincronização por comando, ou conduza a sincronização pelas ferramentas dentro de um turno.
 
 ## Desenvolvimento
 
 ```sh
 pnpm install                                       # node ^22.19 || >=24
-pnpm run typecheck && pnpm run typecheck:ci        # tsc --checkJs contra os peers 0.1.1-rc.2 publicados
+pnpm run typecheck && pnpm run typecheck:ci        # tsc --checkJs contra os peers 0.1.2-alpha.3 publicados
 pnpm test                                          # node --test (12 arquivos de teste; a suíte git do motor é omitida sem git)
 pnpm run verify:self-contained                     # as specs de dependência resolvem do registro
 pnpm run verify:artifacts                          # arquivos publicados presentes + index.mjs importável

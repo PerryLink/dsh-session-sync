@@ -21,7 +21,7 @@ cordis.patch.yml      bundle declaration (insert session-sync); every Config key
 pnpm-workspace.yaml   nearest-workspace root (isolates this repo from the surrounding
                       deepseek-harness workspace during development)
 package.json          npm metadata; files whitelist = published content
-tsconfig.check.json   tsc --checkJs typecheck gate against the published 0.1.1-rc.2 peers
+tsconfig.check.json   tsc --checkJs typecheck gate against the published 0.1.2-alpha.3 peers
 .github/workflows/    CI (3 OS × 2 Node), monthly compat probe, v* npm release
 README.md             English primary (GitHub default page; source of truth)
 README.{zh,es,pt,hi}.md  translations, top switcher, updated in the same commit
@@ -35,7 +35,7 @@ LICENSE               Apache-2.0
 ## Hard rules applied here
 
 - **Optional seams fail closed.** `tools` registers only when present (`ctx.inject(['tools'], …)`); `userQuestions`/`approval` are looked up with `ctx.get` and a missing answerer returns `allowed: false` — read-only surfaces never ask, mutating ones never proceed without an answer.
-- **Session-event adaptive gate is mandatory.** `sync/push`, `sync/pull`, `sync/conflict` are declared in `types.d.ts`, but runtime appends only when the host records the type or supports the `ignorable` envelope (`probeIgnorableAppend`). On `0.1.0-rc.6`, `0.1.0-rc.8`, and `0.1.1-rc.2` the gate stays closed so sessions keep loading. Do not remove the gate "just because" — see `ARCHITECTURE.md`.
+- **Session-event adaptive gate is mandatory.** `sync/push`, `sync/pull`, `sync/conflict` are declared in `types.d.ts`, but runtime appends only when the host records the type or supports the `ignorable` envelope (`probeIgnorableAppend`). On `0.1.0-rc.6`, `0.1.0-rc.8`, `0.1.1-rc.2`, and the `0.1.2-alpha.*` line the gate stays closed so sessions keep loading. Do not remove the gate "just because" — see `ARCHITECTURE.md`.
 - **Append never flips outcomes.** A failed session-event append is swallowed (warn only); a failed fork-notice append must not turn a successful pull into a failure.
 - **Model-visible ⟺ logged.** The only model-visible plugin content is sanitized tool/command output; mutating outcomes append `sync/push`/`sync/pull`/`sync/conflict` through the gate, so the log reconstructs them.
 - **Sanitize before display/log.** Remote-URL credentials, tokens, and `key=value` secrets are redacted in `lib/sanitize.mjs` before reaching the model or the log; path display refuses anything outside its root.
@@ -56,11 +56,11 @@ pnpm run check:readmes                              # five-language README consi
 pnpm pack                                           # the published tarball
 ```
 
-`typecheck` resolves `@deepseek-ai/*` from this repo's own `node_modules` (the pinned `0.1.1-rc.2` peers installed by pnpm). The repo must be its own pnpm workspace (`pnpm-workspace.yaml`) so it never resolves into a surrounding `deepseek-harness` checkout's node_modules.
+`typecheck` resolves `@deepseek-ai/*` from this repo's own `node_modules` (the pinned `0.1.2-alpha.3` peers installed by pnpm). The repo must be its own pnpm workspace (`pnpm-workspace.yaml`) so it never resolves into a surrounding `deepseek-harness` checkout's node_modules.
 
 ## Release
 
-Version is currently `0.1.4`. For a new version: bump `package.json#version`, stamp the CHANGELOG `[Unreleased]` section into `## [<x.y.z>] - <UTC date>`, re-run the full gate, commit `chore(release): <x.y.z>`, and `git tag -a v<x.y.z>`. `git push origin main --follow-tags` triggers `.github/workflows/release.yml`, which re-runs the gate, publishes to npm with provenance (skipped without the `NPM_TOKEN` secret), and creates the GitHub Release from the stamped CHANGELOG section. Never push a tag for a version already on the registry.
+Version is currently `0.2.0`. For a new version: bump `package.json#version`, stamp the CHANGELOG `[Unreleased]` section into `## [<x.y.z>] - <UTC date>`, re-run the full gate, commit `chore(release): <x.y.z>`, and `git tag -a v<x.y.z>`. `git push origin main --follow-tags` triggers `.github/workflows/release.yml`, which re-runs the gate, publishes to npm with provenance (skipped without the `NPM_TOKEN` secret), and creates the GitHub Release from the stamped CHANGELOG section. Never push a tag for a version already on the registry.
 
 ## Docs
 
