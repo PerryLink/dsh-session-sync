@@ -674,7 +674,7 @@ export function apply(ctx, config = {}) {
         forkPaths: paths,
         diverged: paths.length,
       }, eventGate, warn)
-      if (hasOpenTurn(session.events)) {
+      if (hasOpenTurn(typeof session.snapshotEvents === 'function' ? session.snapshotEvents() : session.events)) {
         logger.info(`sync conflict on live session ${sessionId}: turn open, session-level fork skipped (files preserved as forks)`)
         continue
       }
