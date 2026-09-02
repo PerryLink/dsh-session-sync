@@ -28,7 +28,7 @@
 
 | Surface | Status |
 |---|---|
-| Harness | DeepSeek Harness `0.1.1-rc.2` 0.1.2-alpha.3 (adapted 2026-09-01): the session envelope keeps its ignorable field for stored-log read compatibility only - Session.append still cannot stamp it, so audit-gate behavior is unchanged. |
+| Harness | DeepSeek Harness `0.1.1-rc.2` 0.1.2-alpha.5 (adapted 2026-09-02): the session envelope keeps its ignorable field for stored-log read compatibility only - Session.append still cannot stamp it, so audit-gate behavior is unchanged. |
 | Node | `^22.19.0 \|\| >=24.0.0` |
 | Platforms | Anywhere `git` and DSH run (git-based mirror; no platform-specific code) |
 | Model | Text-only models fully supported; no vision or extra model capability required |
@@ -177,14 +177,14 @@ Baseline: with `backend: git` (the default), session bytes are stored unencrypte
 - **git required.** The plugin needs the `git` executable and the `subprocess` service; without them, sync operations fail with a clear reason (profiles keep booting).
 - **age is optional, external.** Encryption depends on the `age` binary on `PATH` (or `ageBin`). No `age` → plaintext fallback with a warning; a passphrase-protected identity cannot be used (decryption would block on a TTY prompt, so it fails closed).
 - **One repoDir per backend.** Switching between `git` and `encrypted` on the same `repoDir` is not supported; use a fresh worktree per backend.
-- **Session events on `0.1.0-rc.6`/`0.1.0-rc.8`/`0.1.1-rc.2`/`0.1.2-alpha.2`/`0.1.2-alpha.3`.** The harness does not record `sync/*` event types, so the session-log appends are skipped (sessions keep loading); the plugin enables them automatically once a host records the types or exposes the `ignorable` envelope on `Session.append`.
+- **Session events on `0.1.0-rc.6`/`0.1.0-rc.8`/`0.1.1-rc.2`/`0.1.2-alpha.2`/`0.1.2-alpha.3`/`0.1.2-alpha.5`.** The harness does not record `sync/*` event types, so the session-log appends are skipped (sessions keep loading); the plugin enables them automatically once a host records the types or exposes the `ignorable` envelope on `Session.append`.
 - **`approval` between turns.** `/sync` runs between turns, where the `approval` channel has no open turn to attach to; use `confirmVia: userQuestions` for command-driven sync, or drive sync through the tools inside a turn.
 
 ## Development
 
 ```sh
 pnpm install                                       # node ^22.19 || >=24
-pnpm run typecheck && pnpm run typecheck:ci        # tsc --checkJs against the published 0.1.2-alpha.3 peers
+pnpm run typecheck && pnpm run typecheck:ci        # tsc --checkJs against the published 0.1.2-alpha.5 peers
 pnpm test                                          # node --test (12 test files; the engine git suite skips without git)
 pnpm run verify:self-contained                     # dependency specs resolve from the registry
 pnpm run verify:artifacts                          # shipped files present + index.mjs importable
