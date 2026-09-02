@@ -1,7 +1,7 @@
 {
   "name": "dsh-session-sync",
   "description": "Cross-device sync for DeepSeek Harness sessions: a dedicated git mirror of the session store, append-only three-way merge with keep-both + fork conflict resolution, /sync command, sync_pull/sync_push/sync_status tools, and configurable auto push/pull",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/PerryLink/dsh-session-sync.git"
