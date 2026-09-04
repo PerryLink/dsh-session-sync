@@ -2,20 +2,12 @@
 #
 # Every key below is a Config field (Schemastery schema); invalid values fail
 # the profile load loudly. See README.md "Configuration" for the full table.
+# The shipped profiles (web/headless/sdk/acp) already compose the storage
+# stack (storage + storage-json + storage-domain) through the dsh-base
+# bundle, so the patch mounts only the plugin row. A bare profile without
+# dsh-base must compose the storage stack itself; until it does, the plugin
+# row stays pending (waiting for service: storageDomain).
 - insert:
-    - id: storage
-      name: '@deepseek-ai/dsh-storage'
-
-    - id: storage-json
-      name: '@deepseek-ai/dsh-storage-json'
-      config:
-        root: !!js dshHomePath('storages')
-
-    - id: storage-domain
-      name: '@deepseek-ai/dsh-storage-domain'
-      config:
-        backend: json
-
     - id: session-sync
       name: dsh-session-sync
       config:
