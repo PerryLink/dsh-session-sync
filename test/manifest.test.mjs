@@ -34,13 +34,14 @@ test('every external patch row name is declared in dependencies or peerDependenc
   }
 })
 
-test('the patch inserts the full storage stack for bare profiles', () => {
+test('the patch inserts only the plugin row: the storage stack comes from dsh-base', () => {
   const names = rowNames(patch)
+  assert.deepEqual(names, ['dsh-session-sync'])
   for (const storage of [
     '@deepseek-ai/dsh-storage',
     '@deepseek-ai/dsh-storage-json',
     '@deepseek-ai/dsh-storage-domain',
   ]) {
-    assert.ok(names.includes(storage), `patch must insert ${storage}`)
+    assert.ok(!names.includes(storage), `patch must not insert ${storage} (dsh-base composes it; a same-id insert fails the boot)`)
   }
 })
