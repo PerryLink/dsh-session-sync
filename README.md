@@ -28,7 +28,7 @@
 
 | Surface | Status |
 |---|---|
-| Harness | DeepSeek Harness `0.1.2-rc.1` (adapted 2026-09-04): the session envelope keeps its ignorable field for stored-log read compatibility only - Session.append still cannot stamp it, so audit-gate behavior is unchanged. |
+| Harness | DeepSeek Harness `dsh-v0.1.3-alpha.1` (GitHub tag, verified 2026-09-06: full gate chain + profile install smoke). npm dependency line `0.1.2-rc.1`, peers `>=0.1.2-rc.1 <0.2.0`. (adapted 2026-09-04): the session envelope keeps its ignorable field for stored-log read compatibility only - Session.append still cannot stamp it, so audit-gate behavior is unchanged. |
 | Node | `^22.19.0 \|\| >=24.0.0` |
 | Platforms | Anywhere `git` and DSH run (git-based mirror; no platform-specific code) |
 | Model | Text-only models fully supported; no vision or extra model capability required |
