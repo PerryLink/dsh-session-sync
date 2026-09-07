@@ -110,6 +110,8 @@ export function probeIgnorableAppend() {
  * @property {boolean} [registerCommand] 注册 /sync 命令。
  * @property {boolean} [registerTools] tools 服务存在时注册 sync_* 工具。
  */
+// Service Definition — Config: the plugin's public configuration contract
+// (Schemastery schema), validated loudly at load by resolveConfig.
 export const Config = Schema.object({
   enabled: Schema.boolean().default(DEFAULTS.ENABLED),
   backend: Schema.union(Object.values(BACKENDS)).default(DEFAULTS.BACKEND),
@@ -693,7 +695,7 @@ export function apply(ctx, config = {}) {
     }
   }
 
-  // --- /sync 命令（Consumer）。
+  // Service Provider — /sync 命令注册进宿主 commands 服务；其 handler 是消费面（Consumer）。
   if (resolved.registerCommand) {
     ctx.commands.register({
       name: COMMAND_NAME,
