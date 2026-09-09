@@ -8,7 +8,9 @@ import {
   resolveRepoDir,
   assertNestingSafe,
   assertRelPath,
+  decodeSegment,
   mirrorPathOf,
+  sessionIdOfForkPath,
   forkFileName,
 } from '../lib/paths.mjs'
 
@@ -55,4 +57,41 @@ test('fork file names are normalized and never collide on timestamp/device', () 
   )
   assert.equal(forkFileName('log', 'bad-stamp', 'SHORT'), 'log.remote-fork-19700101000000-short')
   assert.equal(forkFileName('log', '20260815120000', 'x'.repeat(20)), 'log.remote-fork-20260815120000-unknown')
+})
+
+// 宿主权威布局 = sessions/<projectKey>/<sessionId>/<file>（projectKey 由 cwd 计算，
+// 缺省 _no-cwd；sessionId 经 encodeSegment 转义）。全部为合成字符串，不触碰
+// 任何真实会话目录。
+test('fork paths map to the session id under the host project/session layout', () => {
+  assert.equal(
+    sessionIdOfForkPath('sessions/--D-proj--/abc/session.v3.jsonl.zstd.remote-fork-20260909000000-deadbeef'),
+    'abc',
+  )
+  assert.equal(sessionIdOfForkPath('sessions/_no-cwd/abc/session.jsonl.remote-fork-20260909000000-deadbeef'), 'abc')
+  assert.equal(sessionIdOfForkPath('sessions/--p--/a~007Efoo/session.v3.jsonl.zstd'), 'a~foo')
+  // 旧扁平布局 <mirrorDir>/<sessionId>/<file> 保留宽松回退（末段形如文件名）——
+  // 人工批准项①：宽松兼容，不破坏既有 fixture/遗留镜像语义。
+  assert.equal(sessionIdOfForkPath('sessions/abc/log.jsonl'), 'abc')
+  assert.equal(sessionIdOfForkPath('sessions/stray.txt'), undefined)
+  assert.equal(sessionIdOfForkPath('sessions/--p--/abc'), undefined)
+  assert.equal(sessionIdOfForkPath('sessions//abc/x/session.jsonl'), undefined)
+  assert.equal(sessionIdOfForkPath('other/--p--/abc/session.jsonl'), undefined)
+})
+
+test('fork path mapping stays strict about shape and round-trips host escaping', () => {
+  // 会话目录内更深一层仍映射到同一会话 id；目录/空段/`..` 一律拒绝。
+  assert.equal(sessionIdOfForkPath('sessions/--p--/abc/nested/session.jsonl'), 'abc')
+  assert.equal(sessionIdOfForkPath('sessions/--p--/abc/'), undefined)
+  assert.equal(sessionIdOfForkPath('sessions/--p--/abc/../evil.jsonl'), undefined)
+  assert.equal(sessionIdOfForkPath('sessions/--p--//session.jsonl'), undefined)
+  assert.equal(sessionIdOfForkPath(''), undefined)
+  assert.equal(sessionIdOfForkPath(undefined), undefined)
+  assert.equal(sessionIdOfForkPath('sessions/--p--/abc/session.jsonl', 'mirror'), undefined)
+  assert.equal(sessionIdOfForkPath('mirror/--p--/abc/session.jsonl', 'mirror'), 'abc')
+  // encodeSegment 逆运算：`.`/`..`/`~`/非 ASCII 全部还原（宿主 format.ts:198-213）。
+  assert.equal(decodeSegment('~002E'), '.')
+  assert.equal(decodeSegment('~002E~002E'), '..')
+  assert.equal(decodeSegment('a~007Efoo'), 'a~foo')
+  assert.equal(decodeSegment('~4F60~597D'), '你好')
+  assert.equal(decodeSegment('plain-id'), 'plain-id')
 })

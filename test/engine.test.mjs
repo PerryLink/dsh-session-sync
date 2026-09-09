@@ -13,6 +13,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { GitBackend } from '../lib/git.mjs'
 import { SyncEngine } from '../lib/engine.mjs'
+import { sessionIdOfForkPath } from '../lib/paths.mjs'
 
 const GIT_OK = (() => {
   try {
@@ -165,6 +166,47 @@ test('engine end-to-end: push, adopt, append-both fork, diverged fork, rejected 
   const status = await a.engine.status()
   assert.equal(status.ok, true, `A status failed: ${JSON.stringify(status.error)}`)
   assert.ok(status.behind >= 1, `A should be behind after B pushed (behind=${status.behind})`)
+})
+
+test('engine fork paths carry the host project/session layout and map to the session id', { skip: !GIT_OK && 'git binary not available' }, async (t) => {
+  const { root, clean } = await makeTemp()
+  t.after(clean)
+  const remotePath = path.join(root, 'remote.git')
+  spawnSync('git', ['init', '--bare', remotePath], { stdio: 'ignore' })
+  const eventsA = { meta: [], errors: [], forks: [] }
+  const eventsB = { meta: [], errors: [], forks: [] }
+  const a = await setupDevice(root, 'A', 'aaaaaaaa', remotePath, eventsA)
+  const b = await setupDevice(root, 'B', 'bbbbbbbb', remotePath, eventsB)
+
+  // 真实宿主布局（$DSH_HOME/sessions/<projectKey>/<sessionId>/session.vN.jsonl.zstd）
+  // 的相对路径：fork 路径必须原样保留三段结构，且能映射回会话 id（而非 projectKey）。
+  const rel = '--D-proj--/s1/session.v3.jsonl.zstd'
+  await writeSession(a.sessionRoot, rel, 'frame-1\n')
+  const push1 = await a.engine.push()
+  assert.equal(push1.ok, true, `A first push failed: ${push1.error}`)
+  const pull2 = await b.engine.pull()
+  assert.equal(pull2.ok, true, `B first pull failed: ${pull2.error}`)
+  assert.equal(await readWorktree(b.repoDir, `sessions/${rel}`), 'frame-1\n')
+
+  await writeSession(a.sessionRoot, rel, 'frame-1\nA-more\n')
+  const push3 = await a.engine.push()
+  assert.equal(push3.ok, true, `A second push failed: ${push3.error}`)
+  await writeSession(b.sessionRoot, rel, 'frame-1\nB-more\n')
+  const pull4 = await b.engine.pull()
+  assert.equal(pull4.ok, true, `B append-both pull failed: ${pull4.error}`)
+  assert.equal(pull4.appended, 1)
+  assert.equal(pull4.forks.length, 1)
+  const forkPath = pull4.forks[0]
+  // 形态 = <原相对路径>.remote-fork-<14 位戳>-<8 位设备短 id>；此处戳恒为
+  // forkFileName 的纪元回退值，因为 engine.mjs 的 stamp 计算含非数字 `T`
+  // （toISOString().slice(0,14)）——独立缺陷，不在本卡范围。
+  assert.match(
+    forkPath,
+    /^sessions\/--D-proj--\/s1\/session\.v3\.jsonl\.zstd\.remote-fork-\d{14}-bbbbbbbb$/u,
+    `fork path lost the host layout: ${forkPath}`,
+  )
+  assert.equal(sessionIdOfForkPath(forkPath), 's1')
+  assert.ok(eventsB.forks.includes(forkPath))
 })
 
 test('engine fails loudly without a configured remote', { skip: !GIT_OK && 'git binary not available' }, async (t) => {
