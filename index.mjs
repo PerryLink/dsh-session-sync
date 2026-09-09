@@ -42,7 +42,12 @@ import {
   messageOf,
   registryUnavailable,
 } from './lib/errors.mjs'
-import { assertNestingSafe, resolveRepoDir, resolveSessionRoot } from './lib/paths.mjs'
+import {
+  assertNestingSafe,
+  resolveRepoDir,
+  resolveSessionRoot,
+  sessionIdOfForkPath,
+} from './lib/paths.mjs'
 import { GitBackend } from './lib/git.mjs'
 import { SyncEngine } from './lib/engine.mjs'
 import { EncryptedBackend, encryptTree, decryptTree, mergeTrees } from './lib/encrypted.mjs'
@@ -660,13 +665,19 @@ export function apply(ctx, config = {}) {
   /** fork 文件产生回调：尝试把冲突会话在会话层面 fork（安全时）。 */
   function handleForks(forkPaths) {
     const bySession = new Map()
+    let unmapped = 0
     for (const forkPath of forkPaths) {
-      const parts = forkPath.split('/')
-      if (parts.length >= 2 && parts[0] === 'sessions') {
-        const list = bySession.get(parts[1]) ?? []
-        list.push(forkPath)
-        bySession.set(parts[1], list)
+      const sessionId = sessionIdOfForkPath(forkPath)
+      if (sessionId === undefined) {
+        unmapped += 1
+        continue
       }
+      const list = bySession.get(sessionId) ?? []
+      list.push(forkPath)
+      bySession.set(sessionId, list)
+    }
+    if (unmapped > 0) {
+      logger.warn(`sync: ${unmapped} fork path(s) outside the project/session layout were not mapped to a session-level fork (files preserved)`)
     }
     for (const [sessionId, paths] of bySession) {
       const session = ctx.sessions.get(sessionId)
