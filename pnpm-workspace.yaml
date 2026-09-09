@@ -42,4 +42,13 @@ minimumReleaseAgeExclude:
   - '@deepseek-ai/dsh-user-questions@0.1.5-alpha.1'
   - '@deepseek-ai/dsh-util-crypto@0.1.5-alpha.1'
   - '@deepseek-ai/dsh-util-values@0.1.5-alpha.1'
+# pnpm 11 enables minimumReleaseAge (1440 minutes) by default. The exclusion
+# list above is only consulted while resolving: pnpm 11.7.0's frozen-install
+# lockfile supply-chain verification pass ignores minimumReleaseAgeExclude
+# (both exact `pkg@version` entries and `@scope/*` patterns), so a freshly
+# published @deepseek-ai wave keeps `pnpm install --frozen-lockfile` red with
+# ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION for 24h after every harness release.
+# The sibling PerryLink plugins disable the age gate for the same reason; the
+# exclusion list above stays as the documented intent.
+minimumReleaseAge: 0
 verifyDepsBeforeRun: false
