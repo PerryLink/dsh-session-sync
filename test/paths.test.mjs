@@ -59,6 +59,26 @@ test('fork file names are normalized and never collide on timestamp/device', () 
   assert.equal(forkFileName('log', '20260815120000', 'x'.repeat(20)), 'log.remote-fork-20260815120000-unknown')
 })
 
+// 生成口径（engine.mjs / encrypted.mjs）= ISO 剔除 `-`/`:`/`T` 后截断 14 位。
+// 该戳必须被 forkFileName 原样接受；残留 `T` 的旧口径必须仍被拒绝并回退纪元。
+test('fork file names accept the generator-shaped 14-digit UTC stamp verbatim', () => {
+  const iso = '2026-09-09T13:52:31.123Z'
+  const generated = new Date(iso).toISOString().replace(/[-:T]/gu, '').slice(0, 14)
+  assert.equal(generated, '20260909135231')
+  assert.match(generated, /^\d{14}$/u)
+  assert.notEqual(generated, '19700101000000')
+  assert.equal(
+    forkFileName('session.v3.jsonl.zstd', generated, 'deadbeef'),
+    `session.v3.jsonl.zstd.remote-fork-${generated}-deadbeef`,
+  )
+  // 回归护栏：只去掉 `-`/`:` 会留下 `T`（13 位数字 + T），必须落回纪元而非被
+  // 当成有效戳写进文件名。
+  const legacy = new Date(iso).toISOString().replaceAll('-', '').replaceAll(':', '').slice(0, 14)
+  assert.equal(legacy, '20260909T13523')
+  assert.doesNotMatch(legacy, /^\d{14}$/u)
+  assert.equal(forkFileName('log.jsonl', legacy, 'deadbeef'), 'log.jsonl.remote-fork-19700101000000-deadbeef')
+})
+
 // 宿主权威布局 = sessions/<projectKey>/<sessionId>/<file>（projectKey 由 cwd 计算，
 // 缺省 _no-cwd；sessionId 经 encodeSegment 转义）。全部为合成字符串，不触碰
 // 任何真实会话目录。

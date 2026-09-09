@@ -197,13 +197,28 @@ test('engine fork paths carry the host project/session layout and map to the ses
   assert.equal(pull4.appended, 1)
   assert.equal(pull4.forks.length, 1)
   const forkPath = pull4.forks[0]
-  // 形态 = <原相对路径>.remote-fork-<14 位戳>-<8 位设备短 id>；此处戳恒为
-  // forkFileName 的纪元回退值，因为 engine.mjs 的 stamp 计算含非数字 `T`
-  // （toISOString().slice(0,14)）——独立缺陷，不在本卡范围。
+  // 形态 = <原相对路径>.remote-fork-<14 位戳>-<8 位设备短 id>；戳必须是严格
+  // 14 位数字的真实 UTC 时间（yyyyMMddHHmmss），绝不能是 forkFileName 的
+  // 纪元回退值——engine.mjs 的 stamp 若残留 ISO 的 `T`，正则即失配。
   assert.match(
     forkPath,
     /^sessions\/--D-proj--\/s1\/session\.v3\.jsonl\.zstd\.remote-fork-\d{14}-bbbbbbbb$/u,
     `fork path lost the host layout: ${forkPath}`,
+  )
+  const forkStamp = /-(\d{14})-bbbbbbbb$/u.exec(forkPath)?.[1]
+  assert.ok(forkStamp !== undefined, `fork path carries no 14-digit stamp: ${forkPath}`)
+  assert.notEqual(forkStamp, '19700101000000', `fork stamp fell back to the epoch: ${forkPath}`)
+  const stampMs = Date.UTC(
+    Number(forkStamp.slice(0, 4)),
+    Number(forkStamp.slice(4, 6)) - 1,
+    Number(forkStamp.slice(6, 8)),
+    Number(forkStamp.slice(8, 10)),
+    Number(forkStamp.slice(10, 12)),
+    Number(forkStamp.slice(12, 14)),
+  )
+  assert.ok(
+    Math.abs(Date.now() - stampMs) < 5 * 60 * 1000,
+    `fork stamp is not the pull time: ${forkStamp}`,
   )
   assert.equal(sessionIdOfForkPath(forkPath), 's1')
   assert.ok(eventsB.forks.includes(forkPath))
