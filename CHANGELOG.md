@@ -5,6 +5,12 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.12] - 2026-09-09
+
+### Fixed
+
+- Generate the git-backend fork timestamp as strictly 14 digits: `lib/engine.mjs` stripped only `-` and `:` from `toISOString()` before slicing 14 characters, so the ISO `T` survived (`20260909T13523`), `forkFileName`'s `/^\d{14}$/` check failed, and every git-backend conflict fork silently fell back to the epoch stamp `19700101000000`. The stamp now removes `-`, `:` and `T` exactly like `lib/encrypted.mjs`, yielding a real `yyyyMMddHHmmss` UTC stamp; the encrypted backend was already correct and no other behavior changes. Regression tests assert a 14-digit non-epoch stamp on a real fork path plus the acceptance/fallback contract in `test/paths.test.mjs`.
+
 ## [0.2.11] - 2026-09-09
 
 ### Fixed
