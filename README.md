@@ -29,7 +29,7 @@
 
 | Surface | Status |
 |---|---|
-| Harness | DeepSeek Harness `dsh-v0.1.5-alpha.1` (GitHub tag, verified 2026-09-09: full gate chain + profile install smoke). npm dependency line `0.1.2-rc.1`, peers `>=0.1.2-rc.1 <0.2.0 || >=0.1.5-alpha.1 <0.2.0`. (adapted 2026-09-09): the session envelope keeps its ignorable field for stored-log read compatibility only - Session.append still cannot stamp it, so audit-gate behavior is unchanged. |
+| Harness | DeepSeek Harness `dsh-v0.1.5-rc.1` (GitHub tag, verified 2026-09-10: full gate chain + profile install smoke). npm dependency line `0.1.5-rc.1`, peers `>=0.1.2-rc.1 <0.2.0 || >=0.1.5-alpha.1 <0.2.0`. (adapted 2026-09-09): the session envelope keeps its ignorable field for stored-log read compatibility only - Session.append still cannot stamp it, so audit-gate behavior is unchanged. |
 | Node | `^22.19.0 \|\| >=24.0.0` |
 | Platforms | Anywhere `git` and DSH run (git-based mirror; no platform-specific code) |
 | Model | Text-only models fully supported; no vision or extra model capability required |
@@ -185,7 +185,7 @@ Baseline: with `backend: git` (the default), session bytes are stored unencrypte
 
 ```sh
 pnpm install                                       # node ^22.19 || >=24
-pnpm run typecheck && pnpm run typecheck:ci        # tsc --checkJs against the published 0.1.2-rc.1 peers
+pnpm run typecheck && pnpm run typecheck:ci        # tsc --checkJs against the published 0.1.5-rc.1 peers
 pnpm test                                          # node --test (12 test files; the engine git suite skips without git)
 pnpm run verify:self-contained                     # dependency specs resolve from the registry
 pnpm run verify:artifacts                          # shipped files present + index.mjs importable
