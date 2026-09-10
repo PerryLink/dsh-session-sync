@@ -64,6 +64,6 @@ Version is currently `0.2.12`. For a new version: bump `package.json#version`, s
 
 ## Docs
 
-- Five-language READMEs (`README.md` is the source; `README.zh.md`, `README.es.md`, `README.pt.md`, `README.hi.md` follow). Every behavior change updates all five in the same commit; `check:readmes` enforces the shared surface in CI.
+- Five-language READMEs (`README.md` is the source; `README-zh.md`, `README-es.md`, `README-pt.md`, `README-hi.md` follow). Every behavior change updates all five in the same commit; `check:readmes` enforces the shared surface in CI.
 - GitHub topics `dsh`, `dsh-plugin`, `deepseek-harness`, `deepseek`, `cordis`, `session-sync`, `session`, `git`, `sync`, `cross-device` (mirror `package.json` keywords; the ecosystem's visibility channel is the `dsh-plugin` topic).
 - License is Apache-2.0 (`LICENSE` + the package.json `license` field). `THIRD_PARTY_NOTICES.md` documents install-time dependencies; nothing is bundled.
