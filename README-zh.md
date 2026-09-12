@@ -28,7 +28,7 @@
 
 | 项目 | 状态 |
 |---|---|
-| Harness | DeepSeek Harness `dsh-v0.1.5-rc.1`（GitHub tag，2026-09-10 已核验：完整门控链 + profile 安装冒烟）。npm 依赖线 `0.1.5-rc.1`，peers `>=0.1.2-rc.1 <0.2.0 || >=0.1.5-alpha.1 <0.2.0`。（2026-09-09 已适配）：会话信封保留 ignorable 字段但仅用于存量日志读取兼容——Session.append 仍无法盖章，门控行为不变。 |
+| Harness | DeepSeek Harness `dsh-v0.1.5-rc.2`（GitHub tag，2026-09-11 已核验：完整门控链 + profile 安装冒烟）。npm 依赖线 `0.1.5-rc.2`，peers `>=0.1.2-rc.1 <0.2.0 || >=0.1.5-alpha.1 <0.2.0`。（2026-09-09 已适配）：会话信封保留 ignorable 字段但仅用于存量日志读取兼容——Session.append 仍无法盖章，门控行为不变。 |
 | Node | `^22.19.0 \|\| >=24.0.0` |
 | 平台 | 任何能运行 `git` 和 DSH 的环境（基于 git 镜像；无平台特定代码） |
 | 模型 | 纯文本模型即可完整支持；无需视觉或额外模型能力 |
@@ -182,7 +182,7 @@ dsh --profile web --dump-config | grep -A2 'id: session-sync'
 
 ```sh
 pnpm install                                       # node ^22.19 || >=24
-pnpm run typecheck && pnpm run typecheck:ci        # tsc --checkJs，针对已发布的 0.1.5-rc.1 peers
+pnpm run typecheck && pnpm run typecheck:ci        # tsc --checkJs，针对已发布的 0.1.5-rc.2 peers
 pnpm test                                          # node --test（12 个测试文件；git 引擎套件在无 git 时跳过）
 pnpm run verify:self-contained                     # 依赖 spec 可从 registry 解析
 pnpm run verify:artifacts                          # 发布文件齐全 + index.mjs 可 import

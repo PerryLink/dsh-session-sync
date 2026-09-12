@@ -26,7 +26,7 @@
 
 | Superficie | Estado |
 |---|---|
-| Harness | DeepSeek Harness `dsh-v0.1.5-rc.1` (tag de GitHub, verificado el 2026-09-10: cadena completa de puertas + smoke de instalación de perfil). Línea de dependencias npm `0.1.5-rc.1`, peers `>=0.1.2-rc.1 <0.2.0 || >=0.1.5-alpha.1 <0.2.0`. (adaptado el 2026-09-09): el sobre de sesión conserva su campo ignorable solo para compatibilidad de lectura de logs almacenados - Session.append aún no puede estamparlo, por lo que el comportamiento de la puerta no cambia. |
+| Harness | DeepSeek Harness `dsh-v0.1.5-rc.2` (tag de GitHub, verificado el 2026-09-11: cadena completa de puertas + smoke de instalación de perfil). Línea de dependencias npm `0.1.5-rc.2`, peers `>=0.1.2-rc.1 <0.2.0 || >=0.1.5-alpha.1 <0.2.0`. (adaptado el 2026-09-09): el sobre de sesión conserva su campo ignorable solo para compatibilidad de lectura de logs almacenados - Session.append aún no puede estamparlo, por lo que el comportamiento de la puerta no cambia. |
 | Node | `^22.19.0 \|\| >=24.0.0` |
 | Plataformas | Cualquier lugar donde `git` y DSH se ejecuten (espejo basado en git; sin código específico de plataforma) |
 | Modelo | Los modelos solo texto funcionan plenamente; no se requiere visión ni capacidad extra |
@@ -180,7 +180,7 @@ Línea base: con `backend: git` (el predeterminado), los bytes de sesión se alm
 
 ```sh
 pnpm install                                       # node ^22.19 || >=24
-pnpm run typecheck && pnpm run typecheck:ci        # tsc --checkJs contra los peers 0.1.5-rc.1 publicados
+pnpm run typecheck && pnpm run typecheck:ci        # tsc --checkJs contra los peers 0.1.5-rc.2 publicados
 pnpm test                                          # node --test (12 archivos de test; la suite git del motor se omite sin git)
 pnpm run verify:self-contained                     # las specs de dependencias resuelven desde el registro
 pnpm run verify:artifacts                          # archivos publicados presentes + index.mjs importable
