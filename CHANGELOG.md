@@ -5,6 +5,24 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- The storage-domain handle no longer leaks across an unmount that lands while `ctx.storageDomain.open` is still in flight. The domain effect is registered synchronously inside the apply frame and owns the handle, so the disposer closes the domain once the open settles instead of throwing `INACTIVE_EFFECT` into a swallowed rejection. The silent `.catch(() => {})` is gone: an open or close failure now warns with its reason, and consumers still await the table promise.
+
+- The `approval` confirmation channel reads the open-turn state from the host `turnBoundary` session projection (`openTurnStartSeq`) instead of the removed `Session.events` property. On hosts of the 0.1.6 line the previous read was always `undefined`, so `/sync pull|push` under `confirmVia: approval` failed even inside an open turn; it now proceeds there, and fails closed with an actionable reason when the projection is not composed (`@deepseek-ai/dsh-session-projection` missing) or no turn is open. The conflict path's session-level fork uses the same projection read and skips the fork when the turn state is unavailable (fork files are still preserved).
+
+### Changed
+
+- Host-private session artifacts are never mirrored or deleted. `session.lock` (the harness session lease) and `session.migration.*.tmp` staging files are per-host runtime state; copying them into the worktree leaked one device's transient state into shared history, and deleting them from the worktree churned commits (a previously committed lock could also be removed by a device that simply had no open session). Both mirror loops now protect them; session logs (`session.jsonl`, `session.v[1-9]*.jsonl[.zstd]`) remain the mirrored payload, and a regression test pins that they still sync. A source-side or target-side `session.lock` no longer changes the mirrored file count.
+
+- Fork-path mapping is anchored on the fork file name itself (`forkFileName`'s pattern) instead of a fixed path depth: the session id is the fork file's parent segment, which resolves the host `<projectKey>/<sessionId>/` layout and the legacy flat layout identically and stays correct at any nesting depth.
+
+### Added
+
+- `dsh.manifestVersion: 1`, the canonical three-clause `engines.dsh` range, and an optional peer on `@deepseek-ai/dsh-session-projection` (the open-turn read falls back to a fail-closed reason when it is absent).
+
 ## [0.2.14] - 2026-09-12
 
 ### Changed

@@ -177,14 +177,15 @@ dsh --profile web --dump-config | grep -A2 'id: session-sync'
 - **加密可选。** `backend: encrypted` 增加一层 age 加密（见上文「加密与威胁模型」）；`age` 或密钥缺失时它会显式告警并降级为明文。`backend: git`（默认）下，会话字节以未加密形式存放在**你的** git 远端 —— 请使用私有仓库。
 - **依赖 git。** 插件需要 `git` 可执行文件与 `subprocess` 服务；没有它们时同步操作会给出明确原因失败（profile 仍可启动）。
 - **`0.1.0-rc.6`/`0.1.0-rc.8`/`0.1.1-rc.2`/`0.1.2-alpha.2`/`0.1.2-alpha.3`/`0.1.2-rc.1` 上的会话事件。** harness 尚未收录 `sync/*` 事件类型，因此会话日志追加被跳过（会话仍可加载）；宿主收录类型或 `Session.append` 暴露 `ignorable` 信封后插件会自动开启。
-- **轮次间的 `approval`。** `/sync` 在轮次之间运行，`approval` 通道没有开放轮次可挂靠；请对命令式同步使用 `confirmVia: userQuestions`，或在轮次内经工具驱动同步。
+- **轮次间的 `approval`。** `/sync` 在轮次之间运行，`approval` 通道没有开放轮次可挂靠；请对命令式同步使用 `confirmVia: userQuestions`，或在轮次内经工具驱动同步。开放轮次判定读宿主 `turnBoundary` 会话投影：未组合 `@deepseek-ai/dsh-session-projection` 时无法核实轮次状态，按失败关闭并给出该原因。
+- **宿主私有产物不进同步。** `session.lock`（宿主会话租约）与 `session.migration.*.tmp`（迁移暂存）永不镜像、永不删除——它们是运行时状态而非可同步内容；会话日志（`session.jsonl`、`session.v[1-9]*.jsonl[.zstd]`）仍是镜像载荷。
 
 ## 开发
 
 ```sh
 pnpm install                                       # node ^22.19 || >=24
 pnpm run typecheck && pnpm run typecheck:ci        # tsc --checkJs，针对已发布的 0.1.5-rc.2 peers
-pnpm test                                          # node --test（12 个测试文件；git 引擎套件在无 git 时跳过）
+pnpm test                                          # node --test（13 个测试文件；git 引擎套件在无 git 时跳过）
 pnpm run verify:self-contained                     # 依赖 spec 可从 registry 解析
 pnpm run verify:artifacts                          # 发布文件齐全 + index.mjs 可 import
 pnpm run check:readmes                             # 五语 README 一致性

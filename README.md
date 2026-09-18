@@ -179,14 +179,15 @@ Baseline: with `backend: git` (the default), session bytes are stored unencrypte
 - **age is optional, external.** Encryption depends on the `age` binary on `PATH` (or `ageBin`). No `age` → plaintext fallback with a warning; a passphrase-protected identity cannot be used (decryption would block on a TTY prompt, so it fails closed).
 - **One repoDir per backend.** Switching between `git` and `encrypted` on the same `repoDir` is not supported; use a fresh worktree per backend.
 - **Session events on `0.1.0-rc.6`/`0.1.0-rc.8`/`0.1.1-rc.2`/`0.1.2-alpha.2`/`0.1.2-alpha.3`/`0.1.2-rc.1`.** The harness does not record `sync/*` event types, so the session-log appends are skipped (sessions keep loading); the plugin enables them automatically once a host records the types or exposes the `ignorable` envelope on `Session.append`.
-- **`approval` between turns.** `/sync` runs between turns, where the `approval` channel has no open turn to attach to; use `confirmVia: userQuestions` for command-driven sync, or drive sync through the tools inside a turn.
+- **`approval` between turns.** `/sync` runs between turns, where the `approval` channel has no open turn to attach to; use `confirmVia: userQuestions` for command-driven sync, or drive sync through the tools inside a turn. The open-turn check reads the host `turnBoundary` session projection: a composition without `@deepseek-ai/dsh-session-projection` cannot verify the turn state and fails closed with that reason.
+- **Host-private artifacts stay host-private.** `session.lock` (the harness session lease) and `session.migration.*.tmp` staging files are never mirrored or deleted — they are runtime state, not syncable content. Session logs (`session.jsonl`, `session.v[1-9]*.jsonl[.zstd]`) remain the mirrored payload.
 
 ## Development
 
 ```sh
 pnpm install                                       # node ^22.19 || >=24
 pnpm run typecheck && pnpm run typecheck:ci        # tsc --checkJs against the published 0.1.5-rc.2 peers
-pnpm test                                          # node --test (12 test files; the engine git suite skips without git)
+pnpm test                                          # node --test (13 test files; the engine git suite skips without git)
 pnpm run verify:self-contained                     # dependency specs resolve from the registry
 pnpm run verify:artifacts                          # shipped files present + index.mjs importable
 pnpm run check:readmes                             # five-language README consistency

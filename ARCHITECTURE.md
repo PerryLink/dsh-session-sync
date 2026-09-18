@@ -36,7 +36,7 @@
 $DSH_HOME/sessions ──byte mirror──▶ <repoDir>/sessions ──git──▶ custom remote
 ```
 
-1. **Mirror** copies each session file as opaque bytes into the worktree (symlinks refused, deletions only for files that vanished at the source and are not fork files).
+1. **Mirror** copies each session file as opaque bytes into the worktree (symlinks refused, deletions only for files that vanished at the source and are neither fork files nor host-private artifacts). Host-private artifacts (`session.lock`, the harness session lease, and `session.migration.*.tmp` staging files) are runtime state, not syncable content: the mirror neither copies them in nor deletes them from the worktree.
 2. **Commit** records the mirror as a git commit (plugin identity, never the user's git identity).
 3. **Push/pull** move commits to/from the configured remote over `ctx.subprocess`-driven git.
 
