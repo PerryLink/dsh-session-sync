@@ -121,7 +121,7 @@
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.check.json",
-    "typecheck:ci": "tsc -p tsconfig.check.json",
+    "typecheck:ci": "tsc -p tsconfig.check.ci.json",
     "test": "node --test \"test/*.test.mjs\"",
     "coverage": "node --test --experimental-test-coverage \"test/*.test.mjs\"",
     "lint": "oxlint",
