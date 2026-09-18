@@ -84,6 +84,10 @@ Auto runs are covered by the config grant and never re-confirm.
 - **Sanitize before display/log** — remote-URL credentials, tokens, and `key=value` secrets are redacted before reaching the model or the log.
 - **Bounded subprocesses** — git runs with `GIT_TERMINAL_PROMPT=0` and `GIT_OPTIONAL_LOCKS=0`, deadline- and signal-bounded, with a per-stream output cap.
 
+## Upstream asks (recorded, not implemented)
+
+- **Session-directory layout version marker.** The mirror maps fork files back to sessions by path shape (`<projectKey>/<sessionId>/<file>` plus the legacy flat form). A version marker in the session-directory layout would let a future plugin declare which layout it understands instead of sniffing segment shapes; recorded here per the 0.1.6 adaptation review (P2, no code change requested).
+
 ## Backend vocabulary
 
 `backend: git` is the plaintext mirror transport. `backend: encrypted` wraps the same git transport with an **age** layer above the mirror: the plaintext mirror (`sessions/`) stays local-only (`.gitignore`), each session file is age-encrypted into `encrypted/**/*.age`, and only ciphertext is committed/pushed. Pulls decrypt the remote/base trees back to plaintext and run the same append-only three-way merge locally, then re-encrypt. When `age` is absent or `ageRecipient`/`ageIdentity` is empty, the encrypted backend **degrades to plaintext git** and warns explicitly (status/log) — it never silently claims encryption. `object-storage` is an interface placeholder and fails loud at load.
