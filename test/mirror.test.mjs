@@ -97,3 +97,70 @@ test('ensureDeviceFile writes once and reports later identity changes', async (t
   assert.equal(await ensureDeviceFile(root, 'device.txt', 'dev-2'), true)
   assert.equal(await fs.readFile(path.join(root, 'device.txt'), 'utf8'), 'dev-2\n')
 })
+
+// 宿主私有会话产物（租约 + 迁移暂存）不进镜像；generation log（同步载荷）照常同步。
+// 名称来源：session-persistence-jsonl/lease.ts:40（session.lock）与
+// generation.ts:725（session.migration.<token><suffix>.tmp）；载荷名来源：
+// session-format/filename.ts:14（session[.vN].jsonl）+ format.ts:41（logSuffix）。
+test('host-private artifacts never enter the mirror, generation logs always do', async (t) => {
+  const { root, clean } = await makeTemp()
+  t.after(clean)
+  const src = path.join(root, 'sessions')
+  const repo = path.join(root, 'repo')
+  await fs.mkdir(path.join(src, 's1'), { recursive: true })
+  await fs.writeFile(path.join(src, 's1', 'session.lock'), '{"pid":1}')
+  await fs.writeFile(path.join(src, 's1', 'session.migration.ab12cd.jsonl.tmp'), 'partial\n')
+  await fs.writeFile(path.join(src, 's1', 'session.jsonl'), 'v0 payload\n')
+  await fs.writeFile(path.join(src, 's1', 'session.v2.jsonl.zstd'), Buffer.from([0x28, 0xb5, 0x2f, 0xfd]))
+
+  const result = await mirrorSessionRoot({ sessionRoot: src, repoDir: repo, mirrorDir: 'sessions' })
+
+  // 载荷照常同步（回归锁：白名单写宽 = 插件静默不再同步任何会话内容）。
+  assert.equal(await fs.readFile(path.join(repo, 'sessions', 's1', 'session.jsonl'), 'utf8'), 'v0 payload\n')
+  assert.deepEqual(
+    [...await fs.readFile(path.join(repo, 'sessions', 's1', 'session.v2.jsonl.zstd'))],
+    [0x28, 0xb5, 0x2f, 0xfd],
+  )
+  // 瞬时产物两个都不进镜像、且不计入 mirrored/unchanged。
+  assert.equal(result.mirrored, 2)
+  assert.equal(result.hostArtifactsSkipped, 2)
+  await assert.rejects(fs.access(path.join(repo, 'sessions', 's1', 'session.lock')))
+  await assert.rejects(fs.access(path.join(repo, 'sessions', 's1', 'session.migration.ab12cd.jsonl.tmp')))
+
+  // 文件数守恒：镜像树 = 源树文件数 − 被跳过的宿主产物数。
+  const countFiles = async (dir) => {
+    let total = 0
+    const walk = async (current) => {
+      for (const entry of await fs.readdir(current, { withFileTypes: true })) {
+        const absolute = path.join(current, entry.name)
+        if (entry.isDirectory()) await walk(absolute)
+        else if (entry.isFile()) total += 1
+      }
+    }
+    await walk(dir)
+    return total
+  }
+  assert.equal(await countFiles(path.join(repo, 'sessions')), await countFiles(src) - result.hostArtifactsSkipped)
+})
+
+test('a target-side host-private artifact is preserved, never deleted', async (t) => {
+  const { root, clean } = await makeTemp()
+  t.after(clean)
+  const src = path.join(root, 'sessions')
+  const repo = path.join(root, 'repo')
+  await fs.mkdir(path.join(src, 's1'), { recursive: true })
+  await fs.writeFile(path.join(src, 's1', 'session.jsonl'), 'payload\n')
+  // 目标侧已有另一设备提交/持有的租约与迁移暂存：源侧没有它们。
+  await fs.mkdir(path.join(repo, 'sessions', 's1'), { recursive: true })
+  await fs.writeFile(path.join(repo, 'sessions', 's1', 'session.lock'), '{"pid":9}')
+  await fs.writeFile(path.join(repo, 'sessions', 's1', 'session.migration.zz99.jsonl.tmp'), 'stale\n')
+  // 一个源侧已不存在、且不受白名单保护的常规文件：仍必须被删（删除语义未被削弱）。
+  await fs.writeFile(path.join(repo, 'sessions', 's1', 'obsolete.jsonl'), 'gone\n')
+
+  const result = await mirrorSessionRoot({ sessionRoot: src, repoDir: repo, mirrorDir: 'sessions' })
+
+  assert.equal(await fs.readFile(path.join(repo, 'sessions', 's1', 'session.lock'), 'utf8'), '{"pid":9}')
+  assert.equal(await fs.readFile(path.join(repo, 'sessions', 's1', 'session.migration.zz99.jsonl.tmp'), 'utf8'), 'stale\n')
+  assert.deepEqual(result.hostArtifactsPreserved, ['s1/session.lock', 's1/session.migration.zz99.jsonl.tmp'].sort())
+  assert.deepEqual(result.deleted, ['s1/obsolete.jsonl'])
+})

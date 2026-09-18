@@ -36,7 +36,7 @@
 $DSH_HOME/sessions ──byte mirror──▶ <repoDir>/sessions ──git──▶ custom remote
 ```
 
-1. **Mirror** copies each session file as opaque bytes into the worktree (symlinks refused, deletions only for files that vanished at the source and are not fork files).
+1. **Mirror** copies each session file as opaque bytes into the worktree (symlinks refused, deletions only for files that vanished at the source and are neither fork files nor host-private artifacts). Host-private artifacts (`session.lock`, the harness session lease, and `session.migration.*.tmp` staging files) are runtime state, not syncable content: the mirror neither copies them in nor deletes them from the worktree.
 2. **Commit** records the mirror as a git commit (plugin identity, never the user's git identity).
 3. **Push/pull** move commits to/from the configured remote over `ctx.subprocess`-driven git.
 
@@ -83,6 +83,10 @@ Auto runs are covered by the config grant and never re-confirm.
 - **Symlinks never followed** on either side of the mirror.
 - **Sanitize before display/log** — remote-URL credentials, tokens, and `key=value` secrets are redacted before reaching the model or the log.
 - **Bounded subprocesses** — git runs with `GIT_TERMINAL_PROMPT=0` and `GIT_OPTIONAL_LOCKS=0`, deadline- and signal-bounded, with a per-stream output cap.
+
+## Upstream asks (recorded, not implemented)
+
+- **Session-directory layout version marker.** The mirror maps fork files back to sessions by path shape (`<projectKey>/<sessionId>/<file>` plus the legacy flat form). A version marker in the session-directory layout would let a future plugin declare which layout it understands instead of sniffing segment shapes; recorded here per the 0.1.6 adaptation review (P2, no code change requested).
 
 ## Backend vocabulary
 

@@ -115,3 +115,28 @@ test('fork path mapping stays strict about shape and round-trips host escaping',
   assert.equal(decodeSegment('~4F60~597D'), '你好')
   assert.equal(decodeSegment('plain-id'), 'plain-id')
 })
+
+test('fork-anchored mapping is depth-independent (P1-1)', () => {
+  // 锚点 = fork 文件名本身（forkFileName 规则）：会话 id 恒为其父目录段，
+  // 不再依赖「第 3 段/第 2 段」这类按深度写死的判据。
+  assert.equal(
+    sessionIdOfForkPath('sessions/--p--/abc/session.v3.jsonl.zstd.remote-fork-20260909000000-deadbeef'),
+    'abc',
+  )
+  assert.equal(
+    sessionIdOfForkPath('sessions/abc/session.jsonl.remote-fork-20260909000000-deadbeef'),
+    'abc',
+  )
+  // 更深一层：父目录段即会话 id（旧实现按深度取第 3 段会误判）。
+  assert.equal(
+    sessionIdOfForkPath('sessions/--p--/outer/abc/session.jsonl.remote-fork-20260909000000-deadbeef'),
+    'abc',
+  )
+  // 转义段同样经父目录解码。
+  assert.equal(
+    sessionIdOfForkPath('sessions/--p--/a~007Efoo/session.jsonl.remote-fork-20260909000000-deadbeef'),
+    'a~foo',
+  )
+  // fork 锚点但父段不安全 → 拒绝。
+  assert.equal(sessionIdOfForkPath('sessions/--p--/../session.jsonl.remote-fork-20260909000000-deadbeef'), undefined)
+})
