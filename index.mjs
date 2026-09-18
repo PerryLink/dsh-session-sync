@@ -55,7 +55,7 @@ import { selectEncryptionMode } from './lib/backend.mjs'
 import { detectAge, ageEncrypt, ageDecrypt } from './lib/age.mjs'
 import { collectStatus } from './lib/status.mjs'
 import { renderDiff, renderPull, renderPush, renderStatus, errorValue } from './lib/render.mjs'
-import { confirmSync, hasOpenTurn, makeEventGate, maybeAppendSessionEvent } from './lib/gate.mjs'
+import { confirmSync, hasOpenTurn, makeEventGate, maybeAppendSessionEvent, openTurnFromProjection } from './lib/gate.mjs'
 import { sessionSyncDomainSpec } from './lib/domain.mjs'
 
 export const name = PLUGIN_NAME
@@ -699,8 +699,11 @@ export function apply(ctx, config = {}) {
         forkPaths: paths,
         diverged: paths.length,
       }, eventGate, warn)
-      if (hasOpenTurn(/** @type {{ type: string }[]} */ (typeof session.snapshotEvents === 'function' ? session.snapshotEvents() : (/** @type {{ events?: unknown[] }} */ (session)).events ?? []))) {
-        logger.info(`sync conflict on live session ${sessionId}: turn open, session-level fork skipped (files preserved as forks)`)
+      const openTurn = openTurnFromProjection(ctx, session)
+      if (openTurn !== false) {
+        // true=轮次进行中；undefined=投影缺席。两者都跳过会话级 fork：拿不到
+        // 权威轮次状态时绝不在可能开放的轮次里 fork，fork 文件仍全部保留。
+        logger.info(`sync conflict on live session ${sessionId}: ${openTurn === true ? 'turn open' : 'turn state unavailable (turnBoundary projection absent)'}, session-level fork skipped (files preserved as forks)`)
         continue
       }
       try {
@@ -893,6 +896,7 @@ export {
   makeEventGate,
   maybeAppendSessionEvent,
   hasOpenTurn,
+  openTurnFromProjection,
   resolveSessionRoot,
   resolveRepoDir,
   assertNestingSafe,
