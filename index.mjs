@@ -566,12 +566,24 @@ export function apply(ctx, config = {}) {
   assertNestingSafe(sessionRoot, repoDir)
 
   // --- 同步元数据：ctx.storageDomain 领域 'session-sync'（异步打开，操作路径 await）。
-  /** @type {Promise<object>} 打开后的领域 state 表。 */
-  const tablePromise = ctx.storageDomain.open(sessionSyncDomainSpec).then((domain) => {
-    ctx.effect(() => () => { void domain.close() }, `${PLUGIN_NAME}.domain.close`)
-    return domain.table('state')
-  })
-  tablePromise.catch(() => {}) // 消费方各自处理拒绝；此处仅避免未处理拒绝告警。
+  // V2 形态（A02）：effect 在 apply 帧内**同步注册**并持有打开句柄——异步 open 期间
+  // 卸载时，disposer 仍会等到 promise 落定后关闭句柄，不会出现「INACTIVE_EFFECT
+  // 吞掉注册 ⇒ 域句柄永不关闭」。拒绝显式处理（记录原因 + 一次可见告警），不再用
+  // 静默的 `.catch(() => {})` 掩盖。
+  /** @type {Promise<object>} 打开后的领域 state 表（消费方各自 await）。 */
+  let tablePromise
+  ctx.effect(() => {
+    const opened = ctx.storageDomain.open(sessionSyncDomainSpec)
+    tablePromise = opened.then((domain) => domain.table('state'))
+    tablePromise.catch((error) => {
+      warn(`storage domain open failed: ${error?.message ?? String(error)}`)
+    })
+    return () => {
+      void opened.then((domain) => domain.close()).catch((error) => {
+        warn(`storage domain close failed: ${error?.message ?? String(error)}`)
+      })
+    }
+  }, `${PLUGIN_NAME}.domain.close`)
 
   /** @type {{deviceId: string, lastPullAt?: number, lastPushAt?: number, lastPushHead?: string, lastError?: string}|undefined} 元数据缓存。 */
   let metaCache
