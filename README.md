@@ -3,6 +3,7 @@
 # 🔄 dsh-session-sync
 - **1024 store channel**: `npm i -g dsh1024` once, then `dsh1024 plugin --profile web add dsh-session-sync` (counts toward the [deepseek1024.com](https://deepseek1024.com) install ranking).
 [![Gitee](https://img.shields.io/badge/Gitee-mirror-c71d23?logo=gitee)](https://gitee.com/perrylink/dsh-session-sync)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/PerryLink/dsh-session-sync/badge)](https://api.securityscorecards.dev/projects/github.com/PerryLink/dsh-session-sync)
 
 **Cross-device session sync for DeepSeek Harness — a dedicated git mirror of your session store.**
 
