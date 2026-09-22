@@ -8,20 +8,27 @@ Standalone DeepSeek Harness plugin repository (`dsh-session-sync`). Development 
 index.mjs             single host face: Config schema + resolveConfig, git runner,
                       /sync command handler, sync_* tool factories, auto modes, apply()
 types.d.ts            Config/result types + sync/* SessionEventMap declaration merging
+                      + the MessageSourceMap entry that makes this plugin's own
+                      message source kind legal (see Hard rules)
 lib/                  zero-DSH-dependency modules (see ARCHITECTURE.md module map);
                       the only lib module allowed to import zod/@deepseek-ai/* is
                       lib/domain.mjs (persistence-boundary validator)
 test/*.test.mjs       node --test; engine/git use real git (git tests skip when git
                       is absent) and real temp dirs; scripted runners where git
-                      availability is not guaranteed
+                      availability is not guaranteed; source-readback.test.mjs
+                      drives real host admission functions
 scripts/              mechanical gates: verify-self-contained.mjs, verify-artifacts.mjs,
                       verify-readmes.mjs, changelog-section.mjs
 cordis.patch.yml      bundle declaration (insert session-sync); every Config key
                       documented inline
 pnpm-workspace.yaml   nearest-workspace root (isolates this repo from the surrounding
-                      deepseek-harness workspace during development)
+                      deepseek-harness workspace during development) + overrides that
+                      keep one cordis/cosmokit/schemastery copy
 package.json          npm metadata; files whitelist = published content
-tsconfig.check.json   tsc --checkJs typecheck gate against the published 0.1.2-rc.1 peers
+tsconfig.check.json   tsc --checkJs typecheck gate; `paths` maps the core
+                      @deepseek-ai/* types to the surrounding host checkout
+tsconfig.check.ci.json  the same gate with empty `paths`, resolving every
+                      @deepseek-ai/* from this repo's own node_modules
 .github/workflows/    CI (3 OS × 2 Node), monthly compat probe, v* npm release
 README.md             English primary (GitHub default page; source of truth)
 README-{zh,es,pt,hi}.md  translations, top switcher, updated in the same commit
@@ -39,6 +46,7 @@ LICENSE               Apache-2.0
 - **Append never flips outcomes.** A failed session-event append is swallowed (warn only); a failed fork-notice append must not turn a successful pull into a failure.
 - **Model-visible ⟺ logged.** The only model-visible plugin content is sanitized tool/command output; mutating outcomes append `sync/push`/`sync/pull`/`sync/conflict` through the gate, so the log reconstructs them.
 - **Sanitize before display/log.** Remote-URL credentials, tokens, and `key=value` secrets are redacted in `lib/sanitize.mjs` before reaching the model or the log; path display refuses anything outside its root.
+- **Own your message source kind.** The conflict fork notice is the one durable message this plugin writes; it carries `{ kind: 'dsh-session-sync', form: 'notice', summary }`, declared by declaration merging in `types.d.ts`. The harness has no shared `plugin` source kind (`0.1.7` retired it), and `session-format-v3-to-v4`'s `assertV4MessageSources` refuses `kind === 'plugin'` when a session is read back — a violation leaves the session readable but not continuable. Never write a source kind this package does not declare, and never trust `tsc` alone: the write site is an object literal, so `test/source-readback.test.mjs` (real host admission functions) is the gate that actually fails.
 - **Never silently overwrite.** The append-only three-way merge keeps both sides on any divergence (keep-both + fork files); the mirror never deletes fork files, and git never force-pushes.
 - **Loud misconfiguration.** Unknown backend, unknown `confirmVia`, out-of-bounds numbers, and empty/unsafe paths fail `resolveConfig` at load.
 - **Waterfall discipline.** This plugin registers no waterfall listeners; if it ever does, allow/passthrough MUST call `next()` and only a deliberate deny/ask may short-circuit.
@@ -49,18 +57,18 @@ LICENSE               Apache-2.0
 ```sh
 pnpm install                                        # node ^22.19 || >=24
 pnpm run typecheck && pnpm run typecheck:ci         # tsc --checkJs (tsconfig.check.json)
-pnpm test                                           # node --test (12 test files; the engine git suite skips without git)
+pnpm test                                           # node --test (14 test files; the engine git suite skips without git)
 pnpm run verify:self-contained                      # dependency specs resolve from the registry
 pnpm run verify:artifacts                           # shipped files present + index.mjs importable
 pnpm run check:readmes                              # five-language README consistency
 pnpm pack                                           # the published tarball
 ```
 
-`typecheck` resolves `@deepseek-ai/*` from this repo's own `node_modules` (the pinned `0.1.2-rc.1` peers installed by pnpm). The repo must be its own pnpm workspace (`pnpm-workspace.yaml`) so it never resolves into a surrounding `deepseek-harness` checkout's node_modules.
+`typecheck` (`tsconfig.check.json`) maps the core `@deepseek-ai/*` types through `paths` to the surrounding `deepseek-harness` checkout, so it is the gate that follows host-contract changes first; its remaining `@deepseek-ai/*` imports resolve from this repo's own `node_modules`. `typecheck:ci` (`tsconfig.check.ci.json`) is the same gate with an empty `paths`, resolving every `@deepseek-ai/*` from the pinned `0.1.7-alpha.1` `node_modules` — that is the gate a consumer sees. `types.d.ts` must stay in both `include` lists and in `package.json#files`: it carries the `MessageSourceMap` declaration merging without which neither gate accepts this plugin's own source kind. The repo must be its own pnpm workspace (`pnpm-workspace.yaml`) so it never resolves into a surrounding `deepseek-harness` checkout's node_modules.
 
 ## Release
 
-Version is currently `0.2.12`. For a new version: bump `package.json#version`, stamp the CHANGELOG `[Unreleased]` section into `## [<x.y.z>] - <UTC date>`, re-run the full gate, commit `chore(release): <x.y.z>`, and `git tag -a v<x.y.z>`. `git push origin main --follow-tags` triggers `.github/workflows/release.yml`, which re-runs the gate, publishes to npm with provenance (skipped without the `NPM_TOKEN` secret), and creates the GitHub Release from the stamped CHANGELOG section. Never push a tag for a version already on the registry. `pnpm-workspace.yaml` keeps `minimumReleaseAge: 0`: pnpm 11 enables a 1440-minute age gate by default and its frozen-install lockfile verification ignores `minimumReleaseAgeExclude`, so the freshly published `@deepseek-ai` pins would otherwise keep every fresh install red for 24h after each harness release.
+Version is currently `0.2.16`. For a new version: bump `package.json#version`, stamp the CHANGELOG `[Unreleased]` section into `## [<x.y.z>] - <UTC date>`, re-run the full gate, commit `chore(release): <x.y.z>`, and `git tag -a v<x.y.z>`. `git push origin main --follow-tags` triggers `.github/workflows/release.yml`, which re-runs the gate, publishes to npm with provenance (skipped without the `NPM_TOKEN` secret), and creates the GitHub Release from the stamped CHANGELOG section. Never push a tag for a version already on the registry. `pnpm-workspace.yaml` keeps `minimumReleaseAge: 0`: pnpm 11 enables a 1440-minute age gate by default and its frozen-install lockfile verification ignores `minimumReleaseAgeExclude`, so the freshly published `@deepseek-ai` pins would otherwise keep every fresh install red for 24h after each harness release.
 
 ## Docs
 

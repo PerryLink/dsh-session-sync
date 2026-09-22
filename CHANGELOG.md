@@ -5,6 +5,30 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- The conflict fork notice no longer writes the harness-retired `{ kind: 'plugin', plugin: … }` message source. DeepSeek Harness `0.1.7-alpha.1` turned `MessageSourceMap` into a merge-extensible producer-owned union with no shared `plugin` catch-all, and `@deepseek-ai/dsh-session-format-v3-to-v4`'s `assertV4MessageSources` refuses `kind === 'plugin'` when a session is read back, so a notice written by an earlier build left the forked session readable but not continuable. `injectForkNotice` now writes `{ kind: 'dsh-session-sync', form: 'notice', summary: … }` — the plugin's own producer-owned kind, declared by declaration merging in `types.d.ts`. `form` and `summary` are unchanged, so no user-visible behavior changes.
+
+- `scripts/loader-runner.mjs` sweeps `ctx.registry` for `FiberState.FAILED` fibers after `ctx.loader.await()` and rethrows their `_error`. `cordis-plugin-loader` 1.0.4 (the loader the 0.1.7 host vendors) catches an import failure inside `Entry._init`, logs it and returns, and `EntryTree.await` settles its tasks with `Promise.allSettled`, which never rejects — so a failed mount stopped propagating and the invalid-config and default-export regression cases were exiting non-zero for the wrong reason (`the /sync command is missing`). `FiberState` is a `const enum` with no runtime object, so its `FAILED` value (`3`) is mirrored.
+
+### Added
+
+- `test/source-readback.test.mjs`, a real-host read-back gate: it drives the payload captured from `injectForkNotice` through the host's own admission functions (`assertV4RowAdmission`, `releasedV4SessionFormatCodec.encodeEvent`, `restoreReleasedV4Artifact`) and through `Session.fromRestore` + `deriveMessages`. It admits the new kind, admits the V3-migrated legacy `plugin:dsh-session-sync` form, and pins that the retired `{ kind: 'plugin' }` form is refused — a source-kind regression now fails at the read-back boundary instead of only in the type gate.
+
+### Changed
+
+- Pin the `@deepseek-ai/dsh-*` dev/test dependencies to `0.1.7-alpha.1`, `@deepseek-ai/cordis` to `^4.0.3` (4.0.2 does not export `Volatile`, and `@deepseek-ai/dsh-session-format-v3-to-v4` peer-requires `^4.0.3`), `@deepseek-ai/schemastery` to `^3.18.3` and `@deepseek-ai/cosmokit` to `^1.8.4`. `pnpm-workspace.yaml` gains package-name `overrides` for the bare cordis/cosmokit/schemastery peer edges plus a self-referential `dsh-session-sync` entry, so one copy of each resolves and the host type graph cannot fork. `dshWorkshop.compatibility.dshVersions` now records `0.1.7-alpha.1`.
+
+- Widen `engines.dsh` and every `peerDependencies` range with a fourth `|| >=0.1.7-0 <0.2.0` clause, and add `@deepseek-ai/dsh-session-format-v3-to-v4` to devDependencies. The clause is a bug fix rather than a gratuitous widening: under semver's prerelease rule a prerelease version satisfies a range only when some comparator shares its `major.minor.patch` tuple *and* carries a prerelease tag, so the previous three clauses excluded `0.1.7-alpha.1` — the target host itself.
+
+- Declare `@deepseek-ai/dsh-llm` as a peer. `index.mjs` imports `createUserMessage` from it and `types.d.ts` augments its `MessageSourceMap`, so the dependency the plugin actually consumes was previously undeclared.
+
+### Docs
+
+- Refresh the five-language README compatibility baseline to `dsh-v0.1.7-alpha.1` (verified 2026-09-22) and record the producer-owned source kind in the session-log bullet. `AGENTS.md` gains the `MessageSourceMap` merge in the `types.d.ts` layout line, the corrected test-file count, and the accurate split between the two typecheck gates.
+
 ## [0.2.16] - 2026-09-19
 
 ### Added

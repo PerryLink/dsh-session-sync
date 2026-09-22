@@ -30,7 +30,7 @@
 
 | 项目 | 状态 |
 |---|---|
-| Harness | DeepSeek Harness `dsh-v0.1.5-rc.2`（GitHub tag，2026-09-11 已核验：完整门控链 + profile 安装冒烟）。npm 依赖线 `0.1.5-rc.2`，peers `>=0.1.2-rc.1 <0.2.0 || >=0.1.5-alpha.1 <0.2.0`。（2026-09-09 已适配）：会话信封保留 ignorable 字段但仅用于存量日志读取兼容——Session.append 仍无法盖章，门控行为不变。 |
+| Harness | DeepSeek Harness `dsh-v0.1.7-alpha.1`（GitHub tag，2026-09-22 已核验：完整门控链，针对钉住的 `0.1.7-alpha.1` peers）。npm 依赖线 `0.1.7-alpha.1`，peers `>=0.1.2-rc.1 <0.2.0 || >=0.1.5-alpha.1 <0.2.0 || >=0.1.6-0 <0.2.0 || >=0.1.7-0 <0.2.0`。（2026-09-22 已适配）：冲突 fork 通知携带插件自有的 producer-owned 消息 source kind——宿主已退役共享的 `plugin` kind，读回时一律拒收。 |
 | Node | `^22.19.0 \|\| >=24.0.0` |
 | 平台 | 任何能运行 `git` 和 DSH 的环境（基于 git 镜像；无平台特定代码） |
 | 模型 | 纯文本模型即可完整支持；无需视觉或额外模型能力 |
@@ -145,7 +145,7 @@ dsh --profile web --dump-config | grep -A2 'id: session-sync'
 
 - **权限**：写操作走确认门（`confirmVia`）；插件从不重新实现或绕过 harness 的 `userQuestions`/`approval` 服务。自动模式由配置授权覆盖，不再确认。
 - **数据**：同步元数据（设备 id、最近推/拉、最近推送头、最近错误）存于 `session-sync` 存储领域。会话文件按不透明字节复制 —— 插件从不解析它们。设备 id 也写入同步仓库的 `device.txt`，用于跨设备 fork 归属。
-- **会话日志**：`sync/push`、`sync/pull`、`sync/conflict` 在 `types.d.ts` 中声明；仅当宿主收录这些类型时才追加（见已知限制）。所有写入与展示的内容都经过脱敏。
+- **会话日志**：`sync/push`、`sync/pull`、`sync/conflict` 在 `types.d.ts` 中声明；仅当宿主收录这些类型时才追加（见已知限制）。所有写入与展示的内容都经过脱敏。插件写入的唯一持久消息——冲突 fork 通知——携带插件自有的 producer-owned source kind（`dsh-session-sync`）；宿主已退役共享的 `plugin` kind，读回会话时一律拒收。
 
 ## 安全边界
 
@@ -177,7 +177,7 @@ dsh --profile web --dump-config | grep -A2 'id: session-sync'
 
 - **加密可选。** `backend: encrypted` 增加一层 age 加密（见上文「加密与威胁模型」）；`age` 或密钥缺失时它会显式告警并降级为明文。`backend: git`（默认）下，会话字节以未加密形式存放在**你的** git 远端 —— 请使用私有仓库。
 - **依赖 git。** 插件需要 `git` 可执行文件与 `subprocess` 服务；没有它们时同步操作会给出明确原因失败（profile 仍可启动）。
-- **`0.1.0-rc.6`/`0.1.0-rc.8`/`0.1.1-rc.2`/`0.1.2-alpha.2`/`0.1.2-alpha.3`/`0.1.2-rc.1` 上的会话事件。** harness 尚未收录 `sync/*` 事件类型，因此会话日志追加被跳过（会话仍可加载）；宿主收录类型或 `Session.append` 暴露 `ignorable` 信封后插件会自动开启。
+- **`0.1.0-rc.6`/`0.1.0-rc.8`/`0.1.1-rc.2`/`0.1.2-alpha.2`/`0.1.2-alpha.3`/`0.1.2-rc.1`/`0.1.7-alpha.1` 上的会话事件。** harness 尚未收录 `sync/*` 事件类型，因此会话日志追加被跳过（会话仍可加载）；宿主收录类型或 `Session.append` 暴露 `ignorable` 信封后插件会自动开启。
 - **轮次间的 `approval`。** `/sync` 在轮次之间运行，`approval` 通道没有开放轮次可挂靠；请对命令式同步使用 `confirmVia: userQuestions`，或在轮次内经工具驱动同步。开放轮次判定读宿主 `turnBoundary` 会话投影：未组合 `@deepseek-ai/dsh-session-projection` 时无法核实轮次状态，按失败关闭并给出该原因。
 - **宿主私有产物不进同步。** `session.lock`（宿主会话租约）与 `session.migration.*.tmp`（迁移暂存）永不镜像、永不删除——它们是运行时状态而非可同步内容；会话日志（`session.jsonl`、`session.v[1-9]*.jsonl[.zstd]`）仍是镜像载荷。
 
@@ -185,7 +185,7 @@ dsh --profile web --dump-config | grep -A2 'id: session-sync'
 
 ```sh
 pnpm install                                       # node ^22.19 || >=24
-pnpm run typecheck && pnpm run typecheck:ci        # tsc --checkJs，针对已发布的 0.1.5-rc.2 peers
+pnpm run typecheck && pnpm run typecheck:ci        # tsc --checkJs，针对已发布的 0.1.7-alpha.1 peers
 pnpm test                                          # node --test（13 个测试文件；git 引擎套件在无 git 时跳过）
 pnpm run verify:self-contained                     # 依赖 spec 可从 registry 解析
 pnpm run verify:artifacts                          # 发布文件齐全 + index.mjs 可 import
