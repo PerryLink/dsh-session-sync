@@ -63,6 +63,24 @@ try {
   })
   await ctx.loader.await()
 
+  // cordis-plugin-loader 1.0.4 (the version the 0.1.7 host vendors) no longer
+  // propagates a failed mount to this await: `Entry._init` catches an import
+  // failure, logs it and returns, and `EntryTree.await` settles its tasks with
+  // `Promise.allSettled`, which never rejects. Without the sweep below a
+  // negative case would still exit non-zero — but for the *wrong* reason (this
+  // runner's own "/sync is missing" check), which is exactly the false-green
+  // the invalid-config and default-export regressions exist to prevent.
+  // `FiberState` is a `const enum`, so there is no runtime object to import:
+  // mirror FAILED by value (PENDING 0, LOADING 1, ACTIVE 2, FAILED 3).
+  const FIBER_STATE_FAILED = 3
+  for (const runtime of ctx.registry.values()) {
+    for (const fiber of runtime.fibers) {
+      if (fiber.state !== FIBER_STATE_FAILED) continue
+      const cause = /** @type {any} */ (fiber)._error
+      throw cause instanceof Error ? cause : new Error(String(cause))
+    }
+  }
+
   // Authoritative registries carry the plugin's contributions.
   const agent = /** @type {any} */ ({
     id: 'agent-1',
