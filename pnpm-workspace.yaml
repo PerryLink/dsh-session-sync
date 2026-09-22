@@ -4,44 +4,21 @@
 # checkout (which is where this repo lives during development).
 packages:
   - .
+# Force one copy of the bare peer edges. `@deepseek-ai/cordis`,
+# `@deepseek-ai/cosmokit` and `@deepseek-ai/schemastery` reach this package as
+# transitive peers (cordis → cosmokit; schemastery → cosmokit), so without an
+# override pnpm can hoist a second version and the type graph forks. `cordis`
+# must be 4.0.3: 4.0.2 does not export `Volatile`, and
+# `@deepseek-ai/dsh-session-format-v3-to-v4` peer-requires `^4.0.3`.
+# The self-referential entry keeps any dependency on this package resolving to
+# the workspace copy instead of a second published one.
+overrides:
+  '@deepseek-ai/cordis': ^4.0.3
+  '@deepseek-ai/cosmokit': ^1.8.4
+  '@deepseek-ai/schemastery': ^3.18.3
+  dsh-session-sync: link:.
 minimumReleaseAgeExclude:
-  - '@deepseek-ai/cosmokit@1.8.3'
-  - '@deepseek-ai/dsh-attachment@0.1.2-alpha.5'
-  - '@deepseek-ai/dsh-brand@0.1.2-alpha.5'
-  - '@deepseek-ai/dsh-commands@0.1.2-alpha.5'
-  - '@deepseek-ai/dsh-llm@0.1.2-alpha.5'
-  - '@deepseek-ai/dsh-session@0.1.2-alpha.5'
-  - '@deepseek-ai/dsh-storage-domain@0.1.2-alpha.5'
-  - '@deepseek-ai/dsh-storage-json@0.1.2-alpha.5'
-  - '@deepseek-ai/dsh-storage@0.1.2-alpha.5'
-  - '@deepseek-ai/dsh-subprocess@0.1.2-alpha.5'
-  - '@deepseek-ai/dsh-system-prompt@0.1.2-alpha.5'
-  - '@deepseek-ai/dsh-timeout@0.1.2-alpha.5'
-  - '@deepseek-ai/dsh-tools@0.1.2-alpha.5'
-  - '@deepseek-ai/dsh-typert-protocol@0.1.2-alpha.5'
-  - '@deepseek-ai/dsh-user-approval@0.1.2-alpha.5'
-  - '@deepseek-ai/dsh-user-questions@0.1.2-alpha.5'
-  - '@deepseek-ai/dsh-util-crypto@0.1.2-alpha.5'
-  - '@deepseek-ai/dsh-util-values@0.1.2-alpha.5'
-  - '@deepseek-ai/schemastery@3.18.2'
-  - '@deepseek-ai/dsh-attachment@0.1.5-alpha.1'
-  - '@deepseek-ai/dsh-brand@0.1.5-alpha.1'
-  - '@deepseek-ai/dsh-commands@0.1.5-alpha.1'
-  - '@deepseek-ai/dsh-http-proxy@0.1.5-alpha.1'
-  - '@deepseek-ai/dsh-llm@0.1.5-alpha.1'
-  - '@deepseek-ai/dsh-session@0.1.5-alpha.1'
-  - '@deepseek-ai/dsh-storage-domain@0.1.5-alpha.1'
-  - '@deepseek-ai/dsh-storage-json@0.1.5-alpha.1'
-  - '@deepseek-ai/dsh-storage@0.1.5-alpha.1'
-  - '@deepseek-ai/dsh-subprocess@0.1.5-alpha.1'
-  - '@deepseek-ai/dsh-system-prompt@0.1.5-alpha.1'
-  - '@deepseek-ai/dsh-timeout@0.1.5-alpha.1'
-  - '@deepseek-ai/dsh-tools@0.1.5-alpha.1'
-  - '@deepseek-ai/dsh-typert-protocol@0.1.5-alpha.1'
-  - '@deepseek-ai/dsh-user-approval@0.1.5-alpha.1'
-  - '@deepseek-ai/dsh-user-questions@0.1.5-alpha.1'
-  - '@deepseek-ai/dsh-util-crypto@0.1.5-alpha.1'
-  - '@deepseek-ai/dsh-util-values@0.1.5-alpha.1'
+  - '@deepseek-ai/*'
 # pnpm 11 enables minimumReleaseAge (1440 minutes) by default. The exclusion
 # list above is only consulted while resolving: pnpm 11.7.0's frozen-install
 # lockfile supply-chain verification pass ignores minimumReleaseAgeExclude
