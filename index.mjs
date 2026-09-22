@@ -523,7 +523,13 @@ export function makeSyncPushTool(deps) {
 
 /**
  * 向 fork 子会话注入冲突通知：说明远端版本已留存为 fork 文件、两边历史
- * 都完整。通知是持久的 user/message（plugin source），派生历史会投影它。
+ * 都完整。通知是持久的 user/message（本插件自有的 producer-owned source），
+ * 派生历史会投影它。
+ *
+ * 宿主 0.1.7 起 `MessageSourceMap` 是**可合并扩展的联合**，没有共享的兜底
+ * `plugin` kind；`{ kind: 'plugin' }` 已被退役（`session-format-v3-to-v4`
+ * 的 `assertV4MessageSources` 直接拒收）。这里声明本插件自己的 kind —— 与
+ * `types.d.ts` 的声明合并同名，缺一不可（见 test/source-readback.test.mjs）。
  * @param {import('@deepseek-ai/dsh-session').Session} child - fork 子会话。
  * @param {string[]} forkPaths - 本会话相关 fork 文件路径。
  * @param {string} parentId - 原会话 id。
@@ -538,10 +544,12 @@ export function injectForkNotice(child, forkPaths, parentId) {
     'Both histories are intact in the sync repository; nothing was overwritten.',
   ].filter(line => line.length > 0).join('\n')
   try {
-    child.append('user/message', createUserMessage({
+    /** @type {import('@deepseek-ai/dsh-llm').UserMessage} 冲突通知消息（本插件 producer-owned source）。 */
+    const notice = createUserMessage({
       content: [{ type: 'text', text }],
-      source: { kind: 'plugin', plugin: PLUGIN_NAME, form: 'notice', summary: 'session-sync conflict fork' },
-    }), { surfaceOp: 'append' })
+      source: { kind: 'dsh-session-sync', form: 'notice', summary: 'session-sync conflict fork' },
+    })
+    child.append('user/message', notice, { surfaceOp: 'append' })
   } catch (error) {
     // 通知是锦上添花：append 失败绝不能把一次成功的拉取变成失败。
     return

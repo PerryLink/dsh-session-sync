@@ -1,4 +1,25 @@
-// types.d.ts — dsh-session-sync 类型契约（会话事件声明合并 + 配置类型）。
+// types.d.ts — dsh-session-sync 类型契约（会话事件声明合并 + 消息 source 声明合并
+// + 配置类型）。
+
+/**
+ * 消息 source 的声明合并（宿主 0.1.7 起 `MessageSourceMap` 是 producer-owned 的
+ * 可合并扩展联合，没有共享兜底 `plugin` kind）。
+ *
+ * 为什么必须有这一段：`index.mjs` 里写的是**对象字面量里的字符串**
+ * （`source: { kind: 'dsh-session-sync', … }`），只有把本插件的 kind 合进
+ * `MessageSourceMap`，`kind` 才落在联合内 ⇒ 改回退役的 `'plugin'` 会触发
+ * excess-property/联合不匹配的 `TS2322`。缺了这段，门禁对那一行是**失明**的
+ * （`'plugin'` 只是"又一个字符串"）。
+ *
+ * `ContextFormed` 提供 `form: 'notice'` + `summary` 的分支，语义与原
+ * `{ form: 'notice', summary }` 完全一致（行为不变，仅换 kind）。
+ * @see test/source-readback.test.mjs —— 运行期读回闸（类型门禁之外的唯一判据）。
+ */
+declare module '@deepseek-ai/dsh-llm' {
+  interface MessageSourceMap {
+    'dsh-session-sync': { kind: 'dsh-session-sync' } & import('@deepseek-ai/dsh-llm').ContextFormed
+  }
+}
 
 declare module '@deepseek-ai/dsh-session' {
   interface SessionEventMap {
