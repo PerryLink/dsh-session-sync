@@ -29,7 +29,7 @@
 
 | Superficie | Estado |
 |---|---|
-| Harness | DeepSeek Harness `dsh-v0.1.7-alpha.1` (tag de GitHub, verificado el 2026-09-22: cadena completa de puertas contra los peers `0.1.7-alpha.1` fijados). Línea de dependencias npm `0.1.7-alpha.1`, peers `>=0.1.2-rc.1 <0.2.0 || >=0.1.5-alpha.1 <0.2.0 || >=0.1.6-0 <0.2.0 || >=0.1.7-0 <0.2.0`. (adaptado el 2026-09-22): el aviso de fork por conflicto lleva el source kind propio del plugin (producer-owned) - el harness retiró el kind compartido `plugin` y lo rechaza al releer. |
+| Harness | DeepSeek Harness `dsh-v0.1.7-alpha.2` (tag de GitHub, verificado el 2026-09-22: cadena completa de puertas contra los peers `0.1.7-alpha.2` fijados). Línea de dependencias npm `0.1.7-alpha.2`, peers `>=0.1.2-rc.1 <0.2.0 || >=0.1.5-alpha.1 <0.2.0 || >=0.1.6-0 <0.2.0 || >=0.1.7-0 <0.2.0`. (adaptado el 2026-09-22): el aviso de fork por conflicto lleva el source kind propio del plugin (producer-owned) - el harness retiró el kind compartido `plugin` y lo rechaza al releer. |
 | Node | `^22.19.0 \|\| >=24.0.0` |
 | Plataformas | Cualquier lugar donde `git` y DSH se ejecuten (espejo basado en git; sin código específico de plataforma) |
 | Modelo | Los modelos solo texto funcionan plenamente; no se requiere visión ni capacidad extra |
@@ -176,7 +176,7 @@ Línea base: con `backend: git` (el predeterminado), los bytes de sesión se alm
 
 - **El cifrado es opcional.** `backend: encrypted` añade una capa age (ver «Cifrado y modelo de amenazas» arriba); si falta `age` o las claves, cae a texto plano con una advertencia explícita. Con `backend: git` (el predeterminado), los bytes de sesión se almacenan sin cifrar en **tu** remoto git — usa un repositorio privado.
 - **Se requiere git.** El plugin necesita el ejecutable `git` y el servicio `subprocess`; sin ellos, las operaciones de sincronización fallan con un motivo claro (los perfiles siguen arrancando).
-- **Eventos de sesión en `0.1.0-rc.6`/`0.1.0-rc.8`/`0.1.1-rc.2`/`0.1.2-alpha.2`/`0.1.2-alpha.3`/`0.1.2-rc.1`/`0.1.7-alpha.1`.** El harness aún no registra los tipos `sync/*`, por lo que los anexos al registro de sesión se omiten (las sesiones siguen cargando); el plugin los habilita automáticamente una vez que un host registra los tipos o expone el envoltorio `ignorable` en `Session.append`.
+- **Eventos de sesión en `0.1.0-rc.6`/`0.1.0-rc.8`/`0.1.1-rc.2`/`0.1.2-alpha.2`/`0.1.2-alpha.3`/`0.1.2-rc.1`/`0.1.7-alpha.2`.** El harness aún no registra los tipos `sync/*`, por lo que los anexos al registro de sesión se omiten (las sesiones siguen cargando); el plugin los habilita automáticamente una vez que un host registra los tipos o expone el envoltorio `ignorable` en `Session.append`.
 - **`approval` entre turnos.** `/sync` se ejecuta entre turnos, donde el canal `approval` no tiene un turno abierto al que adjuntarse; usa `confirmVia: userQuestions` para la sincronización por comando, o impulsa la sincronización mediante las herramientas dentro de un turno. La comprobación de turno abierto lee la proyección de sesión `turnBoundary` del host: una composición sin `@deepseek-ai/dsh-session-projection` no puede verificar el estado del turno y falla en cerrado con ese motivo.
 - **Los artefactos privados del host no se sincronizan.** `session.lock` (el arriendo de sesión del harness) y los archivos de staging `session.migration.*.tmp` nunca se reflejan ni se eliminan: son estado de ejecución, no contenido sincronizable. Los registros de sesión (`session.jsonl`, `session.v[1-9]*.jsonl[.zstd]`) siguen siendo la carga útil reflejada.
 
@@ -184,7 +184,7 @@ Línea base: con `backend: git` (el predeterminado), los bytes de sesión se alm
 
 ```sh
 pnpm install                                       # node ^22.19 || >=24
-pnpm run typecheck && pnpm run typecheck:ci        # tsc --checkJs contra los peers 0.1.7-alpha.1 publicados
+pnpm run typecheck && pnpm run typecheck:ci        # tsc --checkJs contra los peers 0.1.7-alpha.2 publicados
 pnpm test                                          # node --test (13 archivos de test; la suite git del motor se omite sin git)
 pnpm run verify:self-contained                     # las specs de dependencias resuelven desde el registro
 pnpm run verify:artifacts                          # archivos publicados presentes + index.mjs importable
