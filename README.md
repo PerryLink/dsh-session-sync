@@ -32,7 +32,7 @@
 
 | Surface | Status |
 |---|---|
-| Harness | DeepSeek Harness `dsh-v0.1.7-alpha.2` (GitHub tag, verified 2026-09-22: full gate chain against the pinned `0.1.7-alpha.2` peers). npm dependency line `0.1.7-alpha.2`, peers `>=0.1.2-rc.1 <0.2.0 || >=0.1.5-alpha.1 <0.2.0 || >=0.1.6-0 <0.2.0 || >=0.1.7-0 <0.2.0`. (adapted 2026-09-22): the conflict fork notice carries the plugin's own producer-owned message source kind - the harness retired the shared `plugin` kind and refuses it on read-back. |
+| Harness | DeepSeek Harness `dsh-v0.1.7-rc.1` (GitHub tag, verified 2026-09-24: full gate chain against the pinned `0.1.7-rc.1` peers). npm dependency line `0.1.7-rc.1`, peers `>=0.1.2-rc.1 <0.2.0 || >=0.1.5-alpha.1 <0.2.0 || >=0.1.6-0 <0.2.0 || >=0.1.7-0 <0.2.0`. (adapted 2026-09-24): the conflict fork notice carries the plugin's own producer-owned message source kind - the harness retired the shared `plugin` kind and refuses it on read-back. |
 | Node | `^22.19.0 \|\| >=24.0.0` |
 | Platforms | Anywhere `git` and DSH run (git-based mirror; no platform-specific code) |
 | Model | Text-only models fully supported; no vision or extra model capability required |

@@ -29,7 +29,7 @@
 
 | Superfície | Status |
 |---|---|
-| Harness | DeepSeek Harness `dsh-v0.1.7-alpha.2` (tag do GitHub, verificado em 2026-09-22: cadeia completa de portas contra os peers `0.1.7-alpha.2` fixados). Linha de dependências npm `0.1.7-alpha.2`, peers `>=0.1.2-rc.1 <0.2.0 || >=0.1.5-alpha.1 <0.2.0 || >=0.1.6-0 <0.2.0 || >=0.1.7-0 <0.2.0`. (adaptado em 2026-09-22): o aviso de fork por conflito carrega o source kind próprio do plugin (producer-owned) - o harness aposentou o kind compartilhado `plugin` e o recusa na releitura. |
+| Harness | DeepSeek Harness `dsh-v0.1.7-rc.1` (tag do GitHub, verificado em 2026-09-24: cadeia completa de portas contra os peers `0.1.7-rc.1` fixados). Linha de dependências npm `0.1.7-rc.1`, peers `>=0.1.2-rc.1 <0.2.0 || >=0.1.5-alpha.1 <0.2.0 || >=0.1.6-0 <0.2.0 || >=0.1.7-0 <0.2.0`. (adaptado em 2026-09-24): o aviso de fork por conflito carrega o source kind próprio do plugin (producer-owned) - o harness aposentou o kind compartilhado `plugin` e o recusa na releitura. |
 | Node | `^22.19.0 \|\| >=24.0.0` |
 | Plataformas | Qualquer lugar onde `git` e o DSH rodem (espelho baseado em git; sem código específico de plataforma) |
 | Modelo | Modelos somente texto são totalmente suportados; sem necessidade de visão ou capacidade extra |
