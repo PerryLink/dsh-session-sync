@@ -13,9 +13,9 @@ packages:
 # The self-referential entry keeps any dependency on this package resolving to
 # the workspace copy instead of a second published one.
 overrides:
-  '@deepseek-ai/cordis': ^4.0.3
-  '@deepseek-ai/cosmokit': ^1.8.4
-  '@deepseek-ai/schemastery': ^3.18.3
+  '@deepseek-ai/cordis': 4.0.5-alpha.1
+  '@deepseek-ai/cosmokit': 1.8.6-alpha.1
+  '@deepseek-ai/schemastery': 3.18.5-alpha.1
   dsh-session-sync: link:.
 minimumReleaseAgeExclude:
   - '@deepseek-ai/*'
