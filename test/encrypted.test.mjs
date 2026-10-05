@@ -12,6 +12,31 @@ import { GitBackend } from '../lib/git.mjs'
 import { EncryptedBackend, mergeTrees, encryptTree, decryptTree } from '../lib/encrypted.mjs'
 
 const HEADER = 'AGE-MOCK:'
+
+/**
+ * Remove a scratch tree, retrying transient failures.
+ *
+ * `fs.rm(..., { force: true })` suppresses ENOENT but NOT the transient ENOTEMPTY /
+ * EBUSY / EPERM that macOS raises when a just-exited child (real `git` in the
+ * end-to-end test) still holds a handle inside the tree. Observed on macos-latest +
+ * Node 22: the teardown hook threw `ENOTEMPTY: directory not empty, rmdir
+ * '/var/folders/.../dsh-session-sync-enc-...'`, failing the whole test as
+ * `hookFailed` while every platform/Node combination that ran slower passed.
+ * Bounded retry, then a final attempt so a genuine leak still surfaces.
+ */
+async function removeTree(root) {
+  const RETRIABLE = new Set(['ENOTEMPTY', 'EBUSY', 'EPERM', 'ENOENT'])
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      await fs.rm(root, { recursive: true, force: true })
+      return
+    } catch (error) {
+      if (!RETRIABLE.has(error?.code) || attempt === 4) throw error
+      await new Promise((resolve) => setTimeout(resolve, 50 * (attempt + 1)))
+    }
+  }
+}
+
 const GIT_OK = (() => {
   try {
     return spawnSync('git', ['--version'], { stdio: 'ignore' }).status === 0
@@ -113,7 +138,7 @@ test('mergeTrees keeps ours + forks theirs on append-both and adopts theirs-only
 
 test('encryptTree/decryptTree roundtrip preserves every file byte', async (t) => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'dsh-session-sync-enc-'))
-  t.after(() => fs.rm(root, { recursive: true, force: true }))
+  t.after(() => removeTree(root))
   const plain = path.join(root, 'plain')
   const enc = path.join(root, 'enc')
   const plain2 = path.join(root, 'plain2')
@@ -138,7 +163,7 @@ test('encryptTree/decryptTree roundtrip preserves every file byte', async (t) =>
 
 test('encrypted end-to-end: push, pull, append-both fork over real git', { skip: !GIT_OK && 'git binary not available' }, async (t) => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'dsh-session-sync-e2e-'))
-  t.after(() => fs.rm(root, { recursive: true, force: true }))
+  t.after(() => removeTree(root))
   const remotePath = path.join(root, 'remote.git')
   spawnSync('git', ['init', '--bare', remotePath], { stdio: 'ignore' })
 
