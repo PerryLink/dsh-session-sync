@@ -261,3 +261,56 @@ test('engine status reports dirty mirror and fork files', { skip: !GIT_OK && 'gi
   const dirty = await device.engine.status()
   assert.ok(dirty.dirty.includes('sessions/s2/new.jsonl'))
 })
+
+test('engine delete/modify conflicts stay keep-both instead of aborting the pull', { skip: !GIT_OK && 'git binary not available' }, async (t) => {
+  const { root, clean } = await makeTemp()
+  t.after(clean)
+  const remotePath = path.join(root, 'remote.git')
+  spawnSync('git', ['init', '--bare', remotePath], { stdio: 'ignore' })
+
+  const eventsA = { meta: [], errors: [], forks: [] }
+  const eventsB = { meta: [], errors: [], forks: [] }
+  const a = await setupDevice(root, 'A', 'aaaaaaaa', remotePath, eventsA)
+  const b = await setupDevice(root, 'B', 'bbbbbbbb', remotePath, eventsB)
+
+  // 基线：两端各持有同一份会话树（pull 只写同步仓库的镜像，不回写会话根，
+  // 所以真实设备的会话文件必须由测试自己摆好）。
+  await writeSession(a.sessionRoot, 's1/log.jsonl', 'line1\n')
+  await writeSession(a.sessionRoot, 's2/keep.jsonl', 'keep1\n')
+  assert.equal((await a.engine.push()).ok, true)
+  assert.equal((await b.engine.pull()).ok, true)
+  await writeSession(b.sessionRoot, 's1/log.jsonl', 'line1\n')
+  await writeSession(b.sessionRoot, 's2/keep.jsonl', 'keep1\n')
+
+  // 情形一：远端删除、本地修改——git 的 modify/delete 冲突不登记 stage 3，
+  // 旧实现对缺失的 stage 调 `checkout --theirs` 会失败并中止整次 pull。
+  await fs.rm(path.join(a.sessionRoot, 's1', 'log.jsonl'))
+  const pushDelete = await a.engine.push()
+  assert.equal(pushDelete.ok, true, `A delete push failed: ${pushDelete.error}`)
+  await writeSession(b.sessionRoot, 's1/log.jsonl', 'line1\nB-more\n')
+  const pullRemoteDelete = await b.engine.pull()
+  assert.equal(pullRemoteDelete.ok, true, `remote-delete pull must not abort: ${pullRemoteDelete.error}`)
+  assert.equal(pullRemoteDelete.diverged, 1)
+  assert.equal(pullRemoteDelete.forks.length, 0, 'a deletion carries no bytes to fork')
+  assert.equal(await readWorktree(b.repoDir, 'sessions/s1/log.jsonl'), 'line1\nB-more\n', 'local edit kept')
+
+  // 情形二：本地删除、远端修改——同一个冲突的镜像方向，不登记 stage 2。
+  await writeSession(a.sessionRoot, 's2/keep.jsonl', 'keep1\nA-more\n')
+  const pushEdit = await a.engine.push()
+  assert.equal(pushEdit.ok, true, `A edit push failed: ${pushEdit.error}`)
+  await fs.rm(path.join(b.sessionRoot, 's2', 'keep.jsonl'))
+  const pullLocalDelete = await b.engine.pull()
+  assert.equal(pullLocalDelete.ok, true, `local-delete pull must not abort: ${pullLocalDelete.error}`)
+  assert.equal(pullLocalDelete.diverged, 1)
+  assert.equal(pullLocalDelete.forks.length, 1)
+  assert.match(pullLocalDelete.forks[0], /^sessions\/s2\/keep\.jsonl\.remote-fork-\d{14}-bbbbbbbb$/u)
+  assert.equal(await readWorktree(b.repoDir, pullLocalDelete.forks[0]), 'keep1\nA-more\n', 'remote version preserved as fork file')
+  await assert.rejects(readWorktree(b.repoDir, 'sessions/s2/keep.jsonl'), 'local deletion is kept')
+  assert.ok(eventsB.forks.includes(pullLocalDelete.forks[0]))
+
+  // 两侧冲突都已落地：仓库可继续提交与推送（残留的 unmerged stage 会在这里失败）。
+  const pushResolved = await b.engine.push()
+  assert.equal(pushResolved.ok, true, `push after delete/modify resolution failed: ${pushResolved.error}`)
+  const status = await b.engine.status()
+  assert.ok(!status.mergeInProgress, 'no merge left in progress after resolution')
+})

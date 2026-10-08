@@ -136,6 +136,32 @@ test('mergeTrees keeps ours + forks theirs on append-both and adopts theirs-only
   assert.equal(merged.get(forkRel).toString(), 'line1\ntheirs\n', 'remote version preserved as fork file')
 })
 
+test('mergeTrees handles remote deletions without ever storing undefined', () => {
+  const base = new Map([
+    ['a/gone.jsonl', Buffer.from('line1\n')],
+    ['b/edited.jsonl', Buffer.from('line1\n')],
+    ['c/same.jsonl', Buffer.from('line1\n')],
+  ])
+  const ours = new Map([
+    ['a/gone.jsonl', Buffer.from('line1\n')],
+    ['b/edited.jsonl', Buffer.from('line1\nours\n')],
+    ['c/same.jsonl', Buffer.from('line1\n')],
+  ])
+  // 远端删除了 a（本地未改）与 b（本地已改），只留 c。
+  const theirs = new Map([['c/same.jsonl', Buffer.from('line1\n')]])
+  const { merged, forks, adopted, appended, diverged } = mergeTrees(base, ours, theirs, '20260815120000', 'aaaaaaaa')
+  assert.equal(adopted, 1, 'remote-only deletion is adopted')
+  assert.equal(diverged, 1, 'remote deletion against a local edit is a loud divergence')
+  assert.equal(appended, 0)
+  assert.equal(forks.length, 0, 'a deletion carries no bytes to fork')
+  assert.equal(merged.has('a/gone.jsonl'), false, 'adopted deletion leaves the merged tree')
+  assert.equal(merged.get('b/edited.jsonl').toString(), 'line1\nours\n', 'local edit kept')
+  assert.equal(merged.get('c/same.jsonl').toString(), 'line1\n')
+  for (const [rel, content] of merged) {
+    assert.ok(Buffer.isBuffer(content), `${rel} must hold real bytes — writeTree fs.writeFile would throw on undefined`)
+  }
+})
+
 test('encryptTree/decryptTree roundtrip preserves every file byte', async (t) => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'dsh-session-sync-enc-'))
   t.after(() => removeTree(root))
