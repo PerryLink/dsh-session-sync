@@ -49,7 +49,7 @@ Este plugin forma parte de la [familia de plugins DSH](https://github.com/PerryL
 
 - **Comando `/sync`** — `status` (rama, remoto saneado, delante/detrás, archivos sucios, forks), `diff`, `log`, `pull`, `push`, `help`.
 - **Herramientas `sync_status` / `sync_pull` / `sync_push`** — la misma superficie para el modelo, dentro de un turno.
-- **Resolución de conflictos append-only** — los registros de sesión son append-only; ante cualquier divergencia el plugin conserva **ambos** lados (la versión local se conserva, la remota se preserva como archivos fork) y nunca sobrescribe en silencio. Una eliminación también cuenta como lado: un conflicto borrado/edición conserva el borrado y preserva los bytes del lado superviviente como archivo fork. Las sesiones divergentes también pueden bifurcarse a nivel de sesión.
+- **Resolución de conflictos append-only** — los registros de sesión son append-only; ante cualquier divergencia el plugin conserva **ambos** lados (la versión local se conserva, la remota se preserva como archivos fork) y nunca sobrescribe en silencio. Una eliminación también cuenta como lado: un conflicto borrado/edición conserva el borrado y preserva los bytes del lado superviviente como archivo fork. Una sesión que solo llegó desde otro dispositivo nunca se confunde con un borrado local, así que la siguiente sincronización nunca deshace un pull. Las sesiones divergentes también pueden bifurcarse a nivel de sesión.
 - **Modos automáticos** — pull al iniciar, push tras cada turno cerrado y pull periódico, todos configurables y reversibles.
 - **Escrituras con confirmación** — `pull`/`push` preguntan primero (mediante `userQuestions` o `approval`); las superficies de solo lectura nunca preguntan; sin respondedor la operación falla cerrada.
 

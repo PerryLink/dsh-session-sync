@@ -53,7 +53,7 @@
 
 - **`/sync` command** — `status` (branch, sanitized remote, ahead/behind, dirty files, forks), `diff`, `log`, `pull`, `push`, `help`.
 - **`sync_status` / `sync_pull` / `sync_push` tools** — the same surface for the model, inside a turn.
-- **Append-only conflict resolution** — session logs are append-only; on any divergence the plugin keeps **both** sides (local version kept, remote version preserved as fork files) and never silently overwrites. A deletion counts as a side too: a delete/edit conflict keeps the deletion and preserves the surviving side's bytes as a fork file. Diverged sessions can also fork at the session level.
+- **Append-only conflict resolution** — session logs are append-only; on any divergence the plugin keeps **both** sides (local version kept, remote version preserved as fork files) and never silently overwrites. A deletion counts as a side too: a delete/edit conflict keeps the deletion and preserves the surviving side's bytes as a fork file. A session that only ever arrived from another device is never mistaken for a local deletion, so a pull is never undone by the next sync. Diverged sessions can also fork at the session level.
 - **Auto modes** — pull on start, push after every closed turn, and periodic pull, all configurable and all reversible.
 - **Confirmation-gated writes** — `pull`/`push` ask first (through `userQuestions` or `approval`); read-only surfaces never ask; with no answerer the operation fails closed.
 

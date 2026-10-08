@@ -49,7 +49,7 @@ O `dsh-session-sync` espelha o seu armazenamento de sessões do DSH em uma árvo
 
 - **Comando `/sync`** — `status` (branch, remoto higienizado, à frente/atrás, arquivos sujos, forks), `diff`, `log`, `pull`, `push`, `help`.
 - **Ferramentas `sync_status` / `sync_pull` / `sync_push`** — a mesma superfície para o modelo, dentro de um turno.
-- **Resolução de conflitos append-only** — os registros de sessão são append-only; em qualquer divergência o plugin mantém **os dois** lados (a versão local é mantida, a remota é preservada como arquivos fork) e nunca sobrescreve em silêncio. Uma exclusão também conta como lado: um conflito exclusão/edição mantém a exclusão e preserva os bytes do lado sobrevivente como arquivo fork. Sessões divergentes também podem bifurcar no nível da sessão.
+- **Resolução de conflitos append-only** — os registros de sessão são append-only; em qualquer divergência o plugin mantém **os dois** lados (a versão local é mantida, a remota é preservada como arquivos fork) e nunca sobrescreve em silêncio. Uma exclusão também conta como lado: um conflito exclusão/edição mantém a exclusão e preserva os bytes do lado sobrevivente como arquivo fork. Uma sessão que só chegou de outro dispositivo nunca é confundida com uma exclusão local, então a sincronização seguinte nunca desfaz um pull. Sessões divergentes também podem bifurcar no nível da sessão.
 - **Modos automáticos** — pull ao iniciar, push após cada turno fechado e pull periódico, todos configuráveis e reversíveis.
 - **Escritas com confirmação** — `pull`/`push` perguntam primeiro (via `userQuestions` ou `approval`); superfícies somente leitura nunca perguntam; sem respondedor a operação falha fechada.
 

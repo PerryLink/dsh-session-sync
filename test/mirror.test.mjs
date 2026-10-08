@@ -43,6 +43,9 @@ test('source deletions sync; fork files are never copied or deleted', async (t) 
   const src = path.join(root, 'sessions')
   const repo = path.join(root, 'repo')
   await fs.mkdir(path.join(src, 's1'), { recursive: true })
+  // 删源快照落在 <repoDir>/.git 下（本地状态，不进提交）。生产路径上
+  // ensureRepo/bootstrap 一定先建好仓库，所以这里照做。
+  await fs.mkdir(path.join(repo, '.git'), { recursive: true })
   await fs.writeFile(path.join(src, 's1', 'log.jsonl'), 'a\n')
   await mirrorSessionRoot({ sessionRoot: src, repoDir: repo, mirrorDir: 'sessions' })
 
@@ -149,13 +152,18 @@ test('a target-side host-private artifact is preserved, never deleted', async (t
   const src = path.join(root, 'sessions')
   const repo = path.join(root, 'repo')
   await fs.mkdir(path.join(src, 's1'), { recursive: true })
+  await fs.mkdir(path.join(repo, '.git'), { recursive: true })
   await fs.writeFile(path.join(src, 's1', 'session.jsonl'), 'payload\n')
+  // 源侧一开始也有 obsolete.jsonl：先镜像一次，把它记进删源快照（＝「这个文件是本机的」）。
+  await fs.writeFile(path.join(src, 's1', 'obsolete.jsonl'), 'gone\n')
+  await mirrorSessionRoot({ sessionRoot: src, repoDir: repo, mirrorDir: 'sessions' })
+
   // 目标侧已有另一设备提交/持有的租约与迁移暂存：源侧没有它们。
-  await fs.mkdir(path.join(repo, 'sessions', 's1'), { recursive: true })
   await fs.writeFile(path.join(repo, 'sessions', 's1', 'session.lock'), '{"pid":9}')
   await fs.writeFile(path.join(repo, 'sessions', 's1', 'session.migration.zz99.jsonl.tmp'), 'stale\n')
-  // 一个源侧已不存在、且不受白名单保护的常规文件：仍必须被删（删除语义未被削弱）。
-  await fs.writeFile(path.join(repo, 'sessions', 's1', 'obsolete.jsonl'), 'gone\n')
+  // 源侧删掉 obsolete.jsonl：它进过上一次快照，且不受白名单保护 → 仍必须被删
+  // （删除语义未被本次改动削弱）。
+  await fs.unlink(path.join(src, 's1', 'obsolete.jsonl'))
 
   const result = await mirrorSessionRoot({ sessionRoot: src, repoDir: repo, mirrorDir: 'sessions' })
 
@@ -163,4 +171,61 @@ test('a target-side host-private artifact is preserved, never deleted', async (t
   assert.equal(await fs.readFile(path.join(repo, 'sessions', 's1', 'session.migration.zz99.jsonl.tmp'), 'utf8'), 'stale\n')
   assert.deepEqual(result.hostArtifactsPreserved, ['s1/session.lock', 's1/session.migration.zz99.jsonl.tmp'].sort())
   assert.deepEqual(result.deleted, ['s1/obsolete.jsonl'])
+})
+
+test('files that only ever arrived from the remote are never deleted', async (t) => {
+  const { root, clean } = await makeTemp()
+  t.after(clean)
+  const src = path.join(root, 'sessions')
+  const repo = path.join(root, 'repo')
+  await fs.mkdir(path.join(src, 's1'), { recursive: true })
+  await fs.mkdir(path.join(repo, '.git'), { recursive: true })
+  await fs.writeFile(path.join(src, 's1', 'mine.jsonl'), 'mine\n')
+  await mirrorSessionRoot({ sessionRoot: src, repoDir: repo, mirrorDir: 'sessions' })
+
+  // 一次 pull 把远端会话合进工作树：源侧从来没有过它。
+  await fs.mkdir(path.join(repo, 'sessions', 's2'), { recursive: true })
+  await fs.writeFile(path.join(repo, 'sessions', 's2', 'theirs.jsonl'), 'theirs\n')
+
+  // 反复镜像（每次 pull/push/status 都会跑一遍）都必须保留它。
+  for (let run = 0; run < 3; run++) {
+    const result = await mirrorSessionRoot({ sessionRoot: src, repoDir: repo, mirrorDir: 'sessions' })
+    assert.deepEqual(result.deleted, [], `run ${run}: a remote-origin file must never be deleted`)
+    assert.deepEqual(result.remotePreserved, ['s2/theirs.jsonl'], `run ${run}: it is reported as remote-preserved`)
+    assert.equal(await fs.readFile(path.join(repo, 'sessions', 's2', 'theirs.jsonl'), 'utf8'), 'theirs\n')
+  }
+  // 本机文件照旧被镜像。
+  assert.equal(await fs.readFile(path.join(repo, 'sessions', 's1', 'mine.jsonl'), 'utf8'), 'mine\n')
+})
+
+test('with no recorded source snapshot nothing is deleted (fail safe)', async (t) => {
+  const { root, clean } = await makeTemp()
+  t.after(clean)
+  const src = path.join(root, 'sessions')
+  const repo = path.join(root, 'repo')
+  await fs.mkdir(path.join(src, 's1'), { recursive: true })
+  await fs.mkdir(path.join(repo, '.git'), { recursive: true })
+  // 工作树里先有内容（等价于一次 clone/pull 之后），但没有任何快照记录。
+  await fs.mkdir(path.join(repo, 'sessions', 's1'), { recursive: true })
+  await fs.writeFile(path.join(repo, 'sessions', 's1', 'unknown.jsonl'), 'unknown\n')
+
+  const result = await mirrorSessionRoot({ sessionRoot: src, repoDir: repo, mirrorDir: 'sessions' })
+
+  assert.deepEqual(result.deleted, [], 'unknown provenance must never delete')
+  assert.deepEqual(result.remotePreserved, ['s1/unknown.jsonl'])
+  assert.equal(await fs.readFile(path.join(repo, 'sessions', 's1', 'unknown.jsonl'), 'utf8'), 'unknown\n')
+})
+
+test('without a git directory the mirror still works, it just never deletes', async (t) => {
+  const { root, clean } = await makeTemp()
+  t.after(clean)
+  const src = path.join(root, 'sessions')
+  const repo = path.join(root, 'repo')       // 故意不建 .git
+  await fs.mkdir(path.join(src, 's1'), { recursive: true })
+  await fs.writeFile(path.join(src, 's1', 'log.jsonl'), 'a\n')
+  const first = await mirrorSessionRoot({ sessionRoot: src, repoDir: repo, mirrorDir: 'sessions' })
+  assert.equal(first.mirrored, 1)
+  await fs.unlink(path.join(src, 's1', 'log.jsonl'))
+  const second = await mirrorSessionRoot({ sessionRoot: src, repoDir: repo, mirrorDir: 'sessions' })
+  assert.deepEqual(second.deleted, [], 'no snapshot store means no deletions — never a wrong delete')
 })

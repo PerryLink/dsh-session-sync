@@ -314,3 +314,51 @@ test('engine delete/modify conflicts stay keep-both instead of aborting the pull
   const status = await b.engine.status()
   assert.ok(!status.mergeInProgress, 'no merge left in progress after resolution')
 })
+
+test('a pulled session survives every later sync, while real deletions still propagate', { skip: !GIT_OK && 'git binary not available' }, async (t) => {
+  const { root, clean } = await makeTemp()
+  t.after(clean)
+  const remotePath = path.join(root, 'remote.git')
+  spawnSync('git', ['init', '--bare', remotePath], { stdio: 'ignore' })
+
+  const eventsA = { meta: [], errors: [], forks: [] }
+  const eventsB = { meta: [], errors: [], forks: [] }
+  const a = await setupDevice(root, 'A', 'aaaaaaaa', remotePath, eventsA)
+  const b = await setupDevice(root, 'B', 'bbbbbbbb', remotePath, eventsB)
+  const rel = 'sessions/p/remote/session.jsonl'
+
+  // A 的会话推到远端，B 拉下来。它只进 B 的同步镜像——pull 从不回写活会话库，
+  // 所以 B 的 sessionRoot 里始终没有这个文件。
+  await writeSession(a.sessionRoot, 'p/remote/session.jsonl', 'from-A\n')
+  assert.equal((await a.engine.push()).ok, true)
+  assert.equal((await b.engine.pull()).ok, true)
+  assert.equal(await readWorktree(b.repoDir, rel), 'from-A\n')
+
+  // 关键回归：此后每一次同步都不得把它当成「本机删除了」而抹掉。旧实现在这里
+  // 连只读的 status 都会删（镜像先跑，按「源里没有」判定），并把删除推回远端，
+  // 造成两台设备互相删除的来回震荡。
+  await b.engine.status()
+  assert.equal(await readWorktree(b.repoDir, rel), 'from-A\n', 'status must not delete a pulled session')
+  const pushB = await b.engine.push()
+  assert.equal(pushB.ok, true, `B push failed: ${pushB.error}`)
+  assert.equal(pushB.deleted, 0, 'B owns nothing here, so it deletes nothing')
+  assert.equal(await readWorktree(b.repoDir, rel), 'from-A\n', 'push must not delete a pulled session')
+
+  // 也不得把删除推回远端：A 再拉一次仍然有它。
+  assert.equal((await a.engine.pull()).ok, true)
+  assert.equal(await readWorktree(a.repoDir, rel), 'from-A\n', 'no ping-pong deletion back to A')
+
+  // 真正的本地删除仍然传播（删除语义未被削弱）：A 删掉自己的会话。
+  await fs.rm(path.join(a.sessionRoot, 'p', 'remote', 'session.jsonl'))
+  const pushDelete = await a.engine.push()
+  assert.equal(pushDelete.ok, true, `A delete push failed: ${pushDelete.error}`)
+  assert.equal(pushDelete.deleted, 1, 'a genuine local deletion still propagates')
+  assert.equal((await b.engine.pull()).ok, true)
+  await assert.rejects(readWorktree(b.repoDir, rel), 'the deletion reaches the non-owner device')
+
+  // 而且 B 不会把它复活推回去。
+  const pushB2 = await b.engine.push()
+  assert.equal(pushB2.ok, true)
+  assert.equal((await a.engine.pull()).ok, true)
+  await assert.rejects(readWorktree(a.repoDir, rel), 'a deleted session is not resurrected by B')
+})
