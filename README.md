@@ -38,6 +38,14 @@
 *English:* part of a 40+ plugin family for DeepSeek Harness. If it is useful, **a star helps the next person find it** — nothing is gated behind it.
 
 
+## What is dsh-session-sync?
+
+Cross-device session sync for DeepSeek Harness — a dedicated git mirror of your session store.
+
+Sync your sessions between devices, keep both sides on any conflict, never lose a turn.
+
+![Terminal demo of dsh-session-sync: dsh-session-sync — mirror the session store, then /sync](https://raw.githubusercontent.com/PerryLink/dsh-session-sync/main/docs/assets/dsh-session-sync-demo.png)
+
 ## Compatibility
 
 | Surface | Status |
@@ -65,8 +73,12 @@ $DSH_HOME/sessions ──mirror──▶ commit ──push──▶ [sessions] �
 ## Quick start
 
 ```sh
+dsh plugin --profile web add github:PerryLink/dsh-session-sync
+```
+
+```sh
 # 1. install the bundle into your profile
-dsh plugin --profile web add "github:PerryLink/dsh-session-sync#main"
+dsh plugin --profile web add github:PerryLink/dsh-session-sync
 
 # or from npm (published releases)
 dsh plugin --profile web add dsh-session-sync
@@ -93,7 +105,7 @@ Then set the remote in your profile patch (a **private** repository is the basel
 
 ## Install & uninstall
 
-- **git channel** (latest `main`): `dsh plugin --profile web add "github:PerryLink/dsh-session-sync#main"` (equivalent to installing from `git+https://github.com/PerryLink/dsh-session-sync.git`). No build step — `index.mjs` and `lib/` are the shipped artifacts.
+- **git channel** (latest `main`): `dsh plugin --profile web add github:PerryLink/dsh-session-sync` (equivalent to installing from `git+https://github.com/PerryLink/dsh-session-sync.git`). No build step — `index.mjs` and `lib/` are the shipped artifacts.
 - **npm channel** (published releases): `dsh plugin --profile web add dsh-session-sync`.
 - **tarball channel**: `pnpm pack` in this repo, then `dsh plugin --profile web add ./dsh-session-sync-<version>.tgz`.
 - **uninstall**: `dsh plugin --profile web remove dsh-session-sync` (or remove the row from the profile patch).

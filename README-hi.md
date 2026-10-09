@@ -34,6 +34,14 @@
 यह प्लगइन [DSH प्लगइन परिवार](https://github.com/PerryLink) का हिस्सा है (40+ प्लगइन, सभी Apache-2.0)। अगर यह उपयोगी लगे, तो **एक स्टार दें** — इससे कोई सुविधा अनलॉक नहीं होती, पर अगला व्यक्ति इसे खोज में आसानी से पा लेता है।
 
 *English:* part of a 40+ plugin family for DeepSeek Harness. If it is useful, **a star helps the next person find it** — nothing is gated behind it.
+## What is dsh-session-sync?
+
+DeepSeek Harness के लिए क्रॉस-डिवाइस सत्र सिंक — आपके सत्र स्टोर का एक समर्पित git मिरर।
+
+अपने सत्रों को डिवाइसों के बीच सिंक करें, किसी भी टकराव में दोनों पक्ष रखें, कभी कोई टर्न न खोएँ।
+
+![dsh-session-sync का टर्मिनल डेमो: dsh-session-sync — mirror the session store, then /sync](https://raw.githubusercontent.com/PerryLink/dsh-session-sync/main/docs/assets/dsh-session-sync-demo.png)
+
 ## संगतता
 
 | सतह | स्थिति |
@@ -61,8 +69,12 @@ $DSH_HOME/sessions ──मिरर──▶ commit ──push──▶ [sessi
 ## त्वरित शुरुआत
 
 ```sh
+dsh plugin --profile web add github:PerryLink/dsh-session-sync
+```
+
+```sh
 # 1. बंडल को अपने प्रोफ़ाइल में इंस्टॉल करें
-dsh plugin --profile web add "github:PerryLink/dsh-session-sync#main"
+dsh plugin --profile web add github:PerryLink/dsh-session-sync
 
 # या npm से (प्रकाशित संस्करण)
 dsh plugin --profile web add dsh-session-sync
@@ -89,7 +101,7 @@ dsh --profile web --dump-config | grep -A2 'id: session-sync'
 
 ## इंस्टॉल और अनइंस्टॉल
 
-- **git चैनल** (नवीनतम `main`): `dsh plugin --profile web add "github:PerryLink/dsh-session-sync#main"` (`git+https://github.com/PerryLink/dsh-session-sync.git` से इंस्टॉल करने के बराबर)। कोई बिल्ड चरण नहीं — `index.mjs` और `lib/` ही प्रकाशित आर्टिफ़ैक्ट हैं।
+- **git चैनल** (नवीनतम `main`): `dsh plugin --profile web add github:PerryLink/dsh-session-sync` (`git+https://github.com/PerryLink/dsh-session-sync.git` से इंस्टॉल करने के बराबर)। कोई बिल्ड चरण नहीं — `index.mjs` और `lib/` ही प्रकाशित आर्टिफ़ैक्ट हैं।
 - **npm चैनल** (प्रकाशित संस्करण): `dsh plugin --profile web add dsh-session-sync`।
 - **tarball चैनल**: इस रिपॉज़िटरी में `pnpm pack` चलाएँ, फिर `dsh plugin --profile web add ./dsh-session-sync-<version>.tgz`।
 - **अनइंस्टॉल**: `dsh plugin --profile web remove dsh-session-sync` (या प्रोफ़ाइल पैच से पंक्ति हटाएँ)।

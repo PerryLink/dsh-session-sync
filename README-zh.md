@@ -36,6 +36,14 @@
 这个插件是 [DSH 插件家族](https://github.com/PerryLink)的一员（40+ 个，全部 Apache-2.0）。如果你在用，**给个 star** —— 它不会解锁任何功能，但会让下一个人在搜索里更容易找到它。
 
 *English:* part of a 40+ plugin family for DeepSeek Harness. If it is useful, **a star helps the next person find it** — nothing is gated behind it.
+## What is dsh-session-sync?
+
+DeepSeek Harness 的跨设备会话同步 —— 为你的会话存储建立专用 git 镜像。
+
+在设备间同步会话，冲突时两边都保留，绝不丢失任何一轮。
+
+![dsh-session-sync 终端演示：dsh-session-sync — mirror the session store, then /sync](https://raw.githubusercontent.com/PerryLink/dsh-session-sync/main/docs/assets/dsh-session-sync-demo.png)
+
 ## 兼容性
 
 | 项目 | 状态 |
@@ -63,8 +71,12 @@ $DSH_HOME/sessions ──镜像──▶ 提交 ──推送──▶ [sessions]
 ## 快速开始
 
 ```sh
+dsh plugin --profile web add github:PerryLink/dsh-session-sync
+```
+
+```sh
 # 1. 把 bundle 安装进你的 profile
-dsh plugin --profile web add "github:PerryLink/dsh-session-sync#main"
+dsh plugin --profile web add github:PerryLink/dsh-session-sync
 
 # 或从 npm（已发布版本）
 dsh plugin --profile web add dsh-session-sync
@@ -91,7 +103,7 @@ dsh --profile web --dump-config | grep -A2 'id: session-sync'
 
 ## 安装与卸载
 
-- **git 通道**（最新 `main`）：`dsh plugin --profile web add "github:PerryLink/dsh-session-sync#main"`（等价于从 `git+https://github.com/PerryLink/dsh-session-sync.git` 安装）。无构建步骤 —— `index.mjs` 与 `lib/` 即发布产物。
+- **git 通道**（最新 `main`）：`dsh plugin --profile web add github:PerryLink/dsh-session-sync`（等价于从 `git+https://github.com/PerryLink/dsh-session-sync.git` 安装）。无构建步骤 —— `index.mjs` 与 `lib/` 即发布产物。
 - **npm 通道**（已发布版本）：`dsh plugin --profile web add dsh-session-sync`。
 - **tarball 通道**：在本仓库执行 `pnpm pack`，然后 `dsh plugin --profile web add ./dsh-session-sync-<version>.tgz`。
 - **卸载**：`dsh plugin --profile web remove dsh-session-sync`（或从 profile patch 删除该行）。
