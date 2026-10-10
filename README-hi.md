@@ -43,6 +43,10 @@ DeepSeek Harness के लिए क्रॉस-डिवाइस सत्�
 
 ![dsh-session-sync का टर्मिनल डेमो: dsh-session-sync — mirror the session store, then /sync](https://raw.githubusercontent.com/PerryLink/dsh-session-sync/main/docs/assets/dsh-session-sync-demo.png)
 
+![Animated terminal demo of dsh-session-sync](https://raw.githubusercontent.com/PerryLink/dsh-session-sync/main/docs/assets/dsh-session-sync-demo.gif)
+
+*वही रन, एनिमेटेड।*
+
 ## संगतता
 
 | सतह | स्थिति |

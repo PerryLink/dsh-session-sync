@@ -43,6 +43,10 @@ Sincronize suas sessões entre dispositivos, mantenha os dois lados em qualquer 
 
 ![Demonstração de terminal do dsh-session-sync: dsh-session-sync — mirror the session store, then /sync](https://raw.githubusercontent.com/PerryLink/dsh-session-sync/main/docs/assets/dsh-session-sync-demo.png)
 
+![Animated terminal demo of dsh-session-sync](https://raw.githubusercontent.com/PerryLink/dsh-session-sync/main/docs/assets/dsh-session-sync-demo.gif)
+
+*A mesma execução, animada.*
+
 ## Compatibilidade
 
 | Superfície | Status |

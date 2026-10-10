@@ -45,6 +45,10 @@ DeepSeek Harness 的跨设备会话同步 —— 为你的会话存储建立专�
 
 ![dsh-session-sync 终端演示：dsh-session-sync — mirror the session store, then /sync](https://raw.githubusercontent.com/PerryLink/dsh-session-sync/main/docs/assets/dsh-session-sync-demo.png)
 
+![Animated terminal demo of dsh-session-sync](https://raw.githubusercontent.com/PerryLink/dsh-session-sync/main/docs/assets/dsh-session-sync-demo.gif)
+
+*同一次运行，动图版。*
+
 ## 兼容性
 
 | 项目 | 状态 |

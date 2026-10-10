@@ -46,6 +46,10 @@ Sync your sessions between devices, keep both sides on any conflict, never lose 
 
 ![Terminal demo of dsh-session-sync: dsh-session-sync — mirror the session store, then /sync](https://raw.githubusercontent.com/PerryLink/dsh-session-sync/main/docs/assets/dsh-session-sync-demo.png)
 
+![Animated terminal demo of dsh-session-sync](https://raw.githubusercontent.com/PerryLink/dsh-session-sync/main/docs/assets/dsh-session-sync-demo.gif)
+
+*The same run, animated.*
+
 ## Compatibility
 
 | Surface | Status |
