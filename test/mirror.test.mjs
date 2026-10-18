@@ -6,7 +6,7 @@ import assert from 'node:assert/strict'
 import { promises as fs } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { mirrorSessionRoot, ensureDeviceFile } from '../lib/mirror.mjs'
+import { mirrorSessionRoot, restoreSessionRoot, ensureDeviceFile } from '../lib/mirror.mjs'
 
 async function makeTemp() {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'dsh-session-sync-mirror-'))
@@ -35,6 +35,23 @@ test('mirrors new files, skips unchanged, reports symlinks', async (t) => {
 
   const content = await fs.readFile(path.join(repo, 'sessions', 's1', 'blob.bin'))
   assert.deepEqual([...content], [0x00, 0xff, 0x28])
+})
+
+test('restores merged mirror files into the live store, never deleting local files', async (t) => {
+  const { root, clean } = await makeTemp()
+  t.after(clean)
+  const src = path.join(root, 'sessions')
+  const repo = path.join(root, 'repo')
+  await fs.mkdir(path.join(src, 's1'), { recursive: true })
+  await fs.writeFile(path.join(src, 's1', 'local.jsonl'), 'local\n')
+  await fs.mkdir(path.join(repo, 'sessions', 's1'), { recursive: true })
+  await fs.writeFile(path.join(repo, 'sessions', 's1', 'remote.jsonl'), 'remote\n')
+  await fs.writeFile(path.join(repo, 'sessions', 's1', 'local.jsonl.remote-fork-20261017120000-a1b2c3d4'), 'fork\n')
+  const result = await restoreSessionRoot({ mirrorRoot: path.join(repo, 'sessions'), sessionRoot: src })
+  assert.equal(result.restored, 1)
+  assert.equal(await fs.readFile(path.join(src, 's1', 'remote.jsonl'), 'utf8'), 'remote\n')
+  assert.equal(await fs.readFile(path.join(src, 's1', 'local.jsonl'), 'utf8'), 'local\n')
+  await assert.rejects(fs.stat(path.join(src, 's1', 'local.jsonl.remote-fork-20261017120000-a1b2c3d4')))
 })
 
 test('source deletions sync; fork files are never copied or deleted', async (t) => {

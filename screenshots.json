@@ -1,5 +1,14 @@
-{
-  "screenshots": [
-    "docs/assets/dsh-session-sync-demo.png"
-  ]
-}
+[
+  {
+    "path": "docs/assets/dsh-session-sync-hero.png",
+    "kind": "hero",
+    "alt": "dsh-session-sync terminal output",
+    "caption": "Real dsh-session-sync test run; test suite green."
+  },
+  {
+    "path": "docs/assets/dsh-session-sync-demo.gif",
+    "kind": "demo",
+    "alt": "Animated dsh-session-sync terminal session",
+    "caption": "The same run, assembled line by line."
+  }
+]

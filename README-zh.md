@@ -43,7 +43,7 @@ DeepSeek Harness 的跨设备会话同步 —— 为你的会话存储建立专�
 
 在设备间同步会话，冲突时两边都保留，绝不丢失任何一轮。
 
-![dsh-session-sync 终端演示：dsh-session-sync — mirror the session store, then /sync](https://raw.githubusercontent.com/PerryLink/dsh-session-sync/main/docs/assets/dsh-session-sync-demo.png)
+![dsh-session-sync 终端演示：dsh-session-sync — mirror the session store, then /sync](https://raw.githubusercontent.com/PerryLink/dsh-session-sync/main/docs/assets/dsh-session-sync-hero.png)
 
 ![Animated terminal demo of dsh-session-sync](https://raw.githubusercontent.com/PerryLink/dsh-session-sync/main/docs/assets/dsh-session-sync-demo.gif)
 

@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.2.26] - 2026-10-18
+
+### Changed
+
+- Add a 1280×720 hero and a 960×540, 4-second terminal GIF rendered from the test run; `screenshots.json` is an object array and `capture.json` records the command.
+
+## [0.2.25] - 2026-10-17
+
+### Fixed
+
+- **Pull now writes merged session files back into the live session store (#15).** Previously `pull` merged only into the git mirror; the next `push` mirrored the live store and unlinked those remote-only files. The merge result is copied back (new/changed files only, no deletions, symlinks/fork/host artifacts skipped) before `pull` returns.
+- **Encrypted age probe runs with a real cwd (#12).** `detectAge` no longer passes `cwd: undefined`; a probe failure is reported instead of silently degrading.
+- **Sanitizer masks token-in-username remotes and mirror writes refuse target symlinks (#13).**
+- Compatibility: add `@deepseek-ai/dsh-working-directory` to devDependencies; the existing 0.2.x engines/peer bands remain.
+
 All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),

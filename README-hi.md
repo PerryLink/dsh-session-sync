@@ -41,7 +41,7 @@ DeepSeek Harness के लिए क्रॉस-डिवाइस सत्�
 
 अपने सत्रों को डिवाइसों के बीच सिंक करें, किसी भी टकराव में दोनों पक्ष रखें, कभी कोई टर्न न खोएँ।
 
-![dsh-session-sync का टर्मिनल डेमो: dsh-session-sync — mirror the session store, then /sync](https://raw.githubusercontent.com/PerryLink/dsh-session-sync/main/docs/assets/dsh-session-sync-demo.png)
+![dsh-session-sync का टर्मिनल डेमो: dsh-session-sync — mirror the session store, then /sync](https://raw.githubusercontent.com/PerryLink/dsh-session-sync/main/docs/assets/dsh-session-sync-hero.png)
 
 ![Animated terminal demo of dsh-session-sync](https://raw.githubusercontent.com/PerryLink/dsh-session-sync/main/docs/assets/dsh-session-sync-demo.gif)
 

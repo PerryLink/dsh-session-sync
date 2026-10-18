@@ -1,7 +1,7 @@
 {
   "name": "dsh-session-sync",
   "description": "Cross-device sync for DeepSeek Harness sessions: a dedicated git mirror of the session store, append-only three-way merge with keep-both + fork conflict resolution, /sync command, sync_pull/sync_push/sync_status tools, and configurable auto push/pull",
-  "version": "0.2.24",
+  "version": "0.2.26",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/PerryLink/dsh-session-sync.git"
@@ -70,8 +70,14 @@
       "credentials:none"
     ],
     "compatibility": {
-      "dshVersions": ["0.1.2-rc.1","0.1.5-rc.2","0.1.7-alpha.2","0.1.7-rc.1", "0.1.7-rc.2",
-        "0.2.1-alpha.1"]
+      "dshVersions": [
+        "0.1.2-rc.1",
+        "0.1.5-rc.2",
+        "0.1.7-alpha.2",
+        "0.1.7-rc.1",
+        "0.1.7-rc.2",
+        "0.2.1-alpha.1"
+      ]
     },
     "capability": {
       "id": "session-sync",
@@ -127,7 +133,8 @@
     "@deepseek-ai/schemastery": "^3.18.5-alpha.1",
     "@types/node": "^22.19.0",
     "oxlint": "0.18.1",
-    "typescript": "^5.9.0"
+    "typescript": "^5.9.0",
+    "@deepseek-ai/dsh-working-directory": "0.2.1-rc.2"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.check.json",
