@@ -21,6 +21,11 @@
 
 [English](README.md) · [简体中文](README-zh.md) · [Español](README-es.md) · [Português](README-pt.md) · [हिन्दी](README-hi.md)
 
+```sh
+dsh plugin --profile <name> add dsh-session-sync
+```
+
+
 </div>
 
 ---
@@ -29,6 +34,13 @@
 **📖 इकोसिस्टम नॉलेज बेस** — मापे गए आँकड़े, मार्केटिंग नहीं: [डेवलपमेंट गाइड · चयन डेटा · रखरखाव मानदंड](https://perrylink.github.io/dsh-plugin-guide/)।
 
 <!-- star-cta -->
+## इंस्टॉल और अनइंस्टॉल
+
+- **git चैनल** (नवीनतम `main`): `dsh plugin --profile web add github:PerryLink/dsh-session-sync` (`git+https://github.com/PerryLink/dsh-session-sync.git` से इंस्टॉल करने के बराबर)। कोई बिल्ड चरण नहीं — `index.mjs` और `lib/` ही प्रकाशित आर्टिफ़ैक्ट हैं।
+- **npm चैनल** (प्रकाशित संस्करण): `dsh plugin --profile web add dsh-session-sync`।
+- **tarball चैनल**: इस रिपॉज़िटरी में `pnpm pack` चलाएँ, फिर `dsh plugin --profile web add ./dsh-session-sync-<version>.tgz`।
+- **अनइंस्टॉल**: `dsh plugin --profile web remove dsh-session-sync` (या प्रोफ़ाइल पैच से पंक्ति हटाएँ)।
+
 ## ⭐ 如果它帮到了你
 
 यह प्लगइन [DSH प्लगइन परिवार](https://github.com/PerryLink) का हिस्सा है (40+ प्लगइन, सभी Apache-2.0)। अगर यह उपयोगी लगे, तो **एक स्टार दें** — इससे कोई सुविधा अनलॉक नहीं होती, पर अगला व्यक्ति इसे खोज में आसानी से पा लेता है।
@@ -103,13 +115,6 @@ dsh --profile web --dump-config | grep -A2 'id: session-sync'
 > /sync pull
 > /sync push
 ```
-
-## इंस्टॉल और अनइंस्टॉल
-
-- **git चैनल** (नवीनतम `main`): `dsh plugin --profile web add github:PerryLink/dsh-session-sync` (`git+https://github.com/PerryLink/dsh-session-sync.git` से इंस्टॉल करने के बराबर)। कोई बिल्ड चरण नहीं — `index.mjs` और `lib/` ही प्रकाशित आर्टिफ़ैक्ट हैं।
-- **npm चैनल** (प्रकाशित संस्करण): `dsh plugin --profile web add dsh-session-sync`।
-- **tarball चैनल**: इस रिपॉज़िटरी में `pnpm pack` चलाएँ, फिर `dsh plugin --profile web add ./dsh-session-sync-<version>.tgz`।
-- **अनइंस्टॉल**: `dsh plugin --profile web remove dsh-session-sync` (या प्रोफ़ाइल पैच से पंक्ति हटाएँ)।
 
 ## कॉन्फ़िगरेशन
 

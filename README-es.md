@@ -21,6 +21,11 @@
 
 [English](README.md) · [简体中文](README-zh.md) · [Español](README-es.md) · [Português](README-pt.md) · [हिन्दी](README-hi.md)
 
+```sh
+dsh plugin --profile <name> add dsh-session-sync
+```
+
+
 </div>
 
 ---
@@ -29,6 +34,13 @@
 **📖 Base de conocimiento del ecosistema** — datos medidos, no marketing: [guía de desarrollo · datos de selección · criterios de mantenimiento](https://perrylink.github.io/dsh-plugin-guide/).
 
 <!-- star-cta -->
+## Instalación y desinstalación
+
+- **Canal git** (último `main`): `dsh plugin --profile web add github:PerryLink/dsh-session-sync` (equivalente a instalar desde `git+https://github.com/PerryLink/dsh-session-sync.git`). Sin paso de compilación — `index.mjs` y `lib/` son los artefactos publicados.
+- **Canal npm** (versiones publicadas): `dsh plugin --profile web add dsh-session-sync`.
+- **Canal tarball**: `pnpm pack` en este repositorio, luego `dsh plugin --profile web add ./dsh-session-sync-<version>.tgz`.
+- **Desinstalar**: `dsh plugin --profile web remove dsh-session-sync` (o elimina la fila del parche de perfil).
+
 ## ⭐ 如果它帮到了你
 
 Este plugin forma parte de la [familia de plugins DSH](https://github.com/PerryLink) (más de 40, todos Apache-2.0). Si te resulta útil, **dale una estrella**: no desbloquea nada, pero ayuda a que la siguiente persona lo encuentre antes.
@@ -103,13 +115,6 @@ Luego configura el remoto en tu parche de perfil (un repositorio **privado** es 
 > /sync pull
 > /sync push
 ```
-
-## Instalación y desinstalación
-
-- **Canal git** (último `main`): `dsh plugin --profile web add github:PerryLink/dsh-session-sync` (equivalente a instalar desde `git+https://github.com/PerryLink/dsh-session-sync.git`). Sin paso de compilación — `index.mjs` y `lib/` son los artefactos publicados.
-- **Canal npm** (versiones publicadas): `dsh plugin --profile web add dsh-session-sync`.
-- **Canal tarball**: `pnpm pack` en este repositorio, luego `dsh plugin --profile web add ./dsh-session-sync-<version>.tgz`.
-- **Desinstalar**: `dsh plugin --profile web remove dsh-session-sync` (o elimina la fila del parche de perfil).
 
 ## Configuración
 

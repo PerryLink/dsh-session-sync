@@ -21,6 +21,11 @@
 
 [English](README.md) · [简体中文](README-zh.md) · [Español](README-es.md) · [Português](README-pt.md) · [हिन्दी](README-hi.md)
 
+```sh
+dsh plugin --profile <name> add dsh-session-sync
+```
+
+
 </div>
 
 ---
@@ -29,6 +34,13 @@
 **📖 Base de conhecimento do ecossistema** — dados medidos, não marketing: [guia de desenvolvimento · dados de seleção · critérios de manutenção](https://perrylink.github.io/dsh-plugin-guide/).
 
 <!-- star-cta -->
+## Instalação e desinstalação
+
+- **Canal git** (último `main`): `dsh plugin --profile web add github:PerryLink/dsh-session-sync` (equivalente a instalar de `git+https://github.com/PerryLink/dsh-session-sync.git`). Sem etapa de compilação — `index.mjs` e `lib/` são os artefatos publicados.
+- **Canal npm** (versões publicadas): `dsh plugin --profile web add dsh-session-sync`.
+- **Canal tarball**: `pnpm pack` neste repositório, depois `dsh plugin --profile web add ./dsh-session-sync-<version>.tgz`.
+- **Desinstalar**: `dsh plugin --profile web remove dsh-session-sync` (ou remova a linha do patch de perfil).
+
 ## ⭐ 如果它帮到了你
 
 Este plugin faz parte da [família de plugins DSH](https://github.com/PerryLink) (mais de 40, todos Apache-2.0). Se for útil, **deixe uma estrela**: não desbloqueia nada, mas ajuda a próxima pessoa a encontrá-lo.
@@ -103,13 +115,6 @@ Depois defina o remoto no seu patch de perfil (um repositório **privado** é a 
 > /sync pull
 > /sync push
 ```
-
-## Instalação e desinstalação
-
-- **Canal git** (último `main`): `dsh plugin --profile web add github:PerryLink/dsh-session-sync` (equivalente a instalar de `git+https://github.com/PerryLink/dsh-session-sync.git`). Sem etapa de compilação — `index.mjs` e `lib/` são os artefatos publicados.
-- **Canal npm** (versões publicadas): `dsh plugin --profile web add dsh-session-sync`.
-- **Canal tarball**: `pnpm pack` neste repositório, depois `dsh plugin --profile web add ./dsh-session-sync-<version>.tgz`.
-- **Desinstalar**: `dsh plugin --profile web remove dsh-session-sync` (ou remova a linha do patch de perfil).
 
 ## Configuração
 
