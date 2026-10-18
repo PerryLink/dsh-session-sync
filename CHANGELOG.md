@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.29] - 2026-10-19
+
+### Fixed
+
+- **Mirror writes now reject parent-directory symlink escapes (issue #13).** `writeIfDifferent` resolves the parent chain and refuses any target outside `repoDir` (or `sessionRoot` for restore), in addition to the existing final-component check.
+- **`git fetch` no longer force-updates the tracking ref (issue #13).** The refspec dropped its leading `+`; a remote that rewrote history now fails the fetch instead of silently force-updating and merging the rewritten tree.
+- The token-as-username redaction half had already landed in 0.2.27.
+
 ## [0.2.28] - 2026-10-18
 
 ### Fixed

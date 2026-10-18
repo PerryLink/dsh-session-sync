@@ -37,6 +37,25 @@ test('mirrors new files, skips unchanged, reports symlinks', async (t) => {
   assert.deepEqual([...content], [0x00, 0xff, 0x28])
 })
 
+test('refuses to write through a parent symlink outside the mirror root', async (t) => {
+  if (process.platform === 'win32') return t.skip('symlink creation needs extra privileges')
+  const { root, clean } = await makeTemp()
+  t.after(clean)
+  const src = path.join(root, 'sessions')
+  const repo = path.join(root, 'repo')
+  const outside = path.join(root, 'outside')
+  await fs.mkdir(path.join(src, 's1'), { recursive: true })
+  await fs.mkdir(outside, { recursive: true })
+  await fs.writeFile(path.join(src, 's1', 'log.jsonl'), 'secret\n')
+  await fs.mkdir(repo, { recursive: true })
+  await fs.symlink(outside, path.join(repo, 'sessions'))
+  await assert.rejects(
+    () => mirrorSessionRoot({ sessionRoot: src, repoDir: repo, mirrorDir: 'sessions' }),
+    /outside/u,
+  )
+  await assert.rejects(fs.readFile(path.join(outside, 's1', 'log.jsonl')), { code: 'ENOENT' })
+})
+
 test('restores merged mirror files into the live store, never deleting local files', async (t) => {
   const { root, clean } = await makeTemp()
   t.after(clean)
