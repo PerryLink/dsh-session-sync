@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.2.28] - 2026-10-18
+
+### Fixed
+
+- **Delete/modify conflicts now keep both sides instead of aborting a pull.** When one side deletes and the other modifies, the modified bytes are preserved (remote side as a fork file when present), the deletion intent is honored, and the merge continues; the earlier code called `checkout --ours/--theirs` on a missing stage and aborted the whole pull.
+- **Pulled-only sessions are never deleted by the next local sync.** `mirrorSessionRoot` records the source snapshot under `.git/` and only deletes files it previously mirrored from the local `sessionRoot`; a file that arrived via pull is left untouched, and an unknown snapshot deletes nothing.
+- **Remote deletions reach the non-owner device without being resurrected.** `restoreSessionRoot` records hashes of copies it created; a later pull prunes a pulled copy only while its bytes still match the recorded hash. A user-edited copy is kept and pushes normally.
+- The three-way tree merge also tolerates a missing side instead of putting `undefined` into the merged tree.
+
+Closes the conflict-resolution half of PR #14. The redaction half landed in 0.2.27.
+
 ## [0.2.27] - 2026-10-18
 
 ### Fixed
