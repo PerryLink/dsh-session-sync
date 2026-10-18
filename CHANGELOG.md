@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.2.27] - 2026-10-18
+
+### Fixed
+
+- **PAT-as-username is now redacted, not echoed.** `https://<token>@host/…` is the common non-interactive Git credential form, and the previous sanitizer only masked userinfo when a password was present. A password-less token-shaped username is now masked; modern token families (`github_pat_`, `gh[pousr]_`, `glpat-`, `npm_`, JWT, …) are covered, malformed remotes are run through `redactText` instead of echoed, and userinfo + query credentials are redacted in the same pass. This closes the redaction half of issue/PR #14; the delete/modify conflict half is still tracked separately.
+
 ## [0.2.26] - 2026-10-18
 
 ### Changed

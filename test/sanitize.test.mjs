@@ -74,3 +74,40 @@ test('sanitize output embeds no remote credentials when wrapped twice', () => {
   const twice = redactText(`remote ${once}`)
   assert.ok(!twice.includes('p@host'))
 })
+
+test('password-less token username is redacted (PAT-as-username)', () => {
+  const classic = sanitizeRemote('https://ghp_AAAABBBBCCCCDDDDEEEEFFFF1234@github.com/you/repo.git')
+  assert.ok(!classic.includes('ghp_AAAABBBBCCCCDDDDEEEEFFFF1234'), 'classic PAT')
+  assert.ok(classic.includes('***@github.com'))
+  const fine = sanitizeRemote('https://github_pat_11ABCDEFG0123456789_abcdefghijklmnopqrstuvwxyz0123456789ABCDEF@github.com/you/repo.git')
+  assert.ok(!fine.includes('github_pat_11ABCDEFG'), 'fine-grained PAT')
+  const gitlab = sanitizeRemote('https://glpat-ABCDEFGHIJKLMNOPQRST@gitlab.com/you/repo.git')
+  assert.ok(!gitlab.includes('glpat-ABCDEFGHIJKLMNOPQRST'), 'gitlab PAT')
+  const hex = sanitizeRemote('https://a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0@github.com/you/repo.git')
+  assert.ok(!hex.includes('a1b2c3d4e5f6'), 'prefix-less random token')
+})
+
+test('benign password-less usernames stay visible', () => {
+  assert.equal(sanitizeRemote('https://alice@github.com/you/repo.git'), 'https://alice@github.com/you/repo.git')
+  assert.equal(sanitizeRemote('https://x-access-token@github.com/you/repo.git'), 'https://x-access-token@github.com/you/repo.git')
+  assert.equal(sanitizeRemote('https://gitlab-ci-token@gitlab.com/you/repo.git'), 'https://gitlab-ci-token@gitlab.com/you/repo.git')
+})
+
+test('userinfo and query credentials are both redacted on the same URL', () => {
+  const out = sanitizeRemote('https://u:p@host/x.git?access_token=secret123')
+  assert.ok(!out.includes('p@host'), 'password redacted')
+  assert.ok(!out.includes('secret123'), 'query token redacted in the same pass')
+})
+
+test('modern token families are redacted in free text', () => {
+  const text = 'a github_pat_11ABCDEFG0123456789_abcdefghijklmnopqrstuvwxyz0123456789ABCDEF b glpat-ABCDEFGHIJKLMNOPQRST c npm_0123456789012345678901234567890 d ghs_0123456789abcdef0123 e'
+  const out = redactText(text)
+  for (const secret of ['github_pat_11ABCDEFG', 'glpat-ABCDEFGHIJKLMNOPQRST', 'npm_0123456789012345678901234567890', 'ghs_0123456789abcdef0123']) {
+    assert.ok(!out.includes(secret), `${secret} must be redacted`)
+  }
+})
+
+test('unparseable remote with an embedded token is redacted, not echoed', () => {
+  const out = sanitizeRemote('https://ghp_AAAABBBBCCCCDDDDEEEEFFFF1234@host:path/repo.git')
+  assert.ok(!out.includes('ghp_AAAABBBBCCCCDDDDEEEEFFFF1234'))
+})
