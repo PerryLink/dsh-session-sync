@@ -48,9 +48,10 @@ DeepSeek Harness 的跨设备会话同步 —— 为你的会话存储建立专�
 
 在设备间同步会话，冲突时两边都保留，绝不丢失任何一轮。
 
-![dsh-session-sync 终端演示：dsh-session-sync — mirror the session store, then /sync](https://raw.githubusercontent.com/PerryLink/dsh-session-sync/main/docs/assets/dsh-session-sync-hero.png)
+![dsh-session-sync 工作流图：请求 → 策略/复核 → 判定。](docs/assets/dsh-session-sync-flow.svg)
 
-![Animated terminal demo of dsh-session-sync](https://raw.githubusercontent.com/PerryLink/dsh-session-sync/main/docs/assets/dsh-session-sync-demo.gif)
+*工作流概览：请求 → 策略/复核 → 判定。下面的示例使用实际命令面。*
+
 
 *同一次运行，动图版。*
 
@@ -117,6 +118,19 @@ dsh --profile web --dump-config | grep -A2 'id: session-sync'
 - **npm 通道**（已发布版本）：`dsh plugin --profile web add dsh-session-sync`。
 - **tarball 通道**：在本仓库执行 `pnpm pack`，然后 `dsh plugin --profile web add ./dsh-session-sync-<version>.tgz`。
 - **卸载**：`dsh plugin --profile web remove dsh-session-sync`（或从 profile patch 删除该行）。
+
+### 示例
+
+以下为插件真实入口；安装后调用一个即可。
+
+#### 详细示例
+
+- `/sync status`
+
+#### 简短示例
+
+- `/sync diff`
+- `/sync pull`
 
 ## 配置
 

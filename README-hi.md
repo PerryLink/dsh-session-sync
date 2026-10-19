@@ -53,9 +53,10 @@ DeepSeek Harness के लिए क्रॉस-डिवाइस सत्�
 
 अपने सत्रों को डिवाइसों के बीच सिंक करें, किसी भी टकराव में दोनों पक्ष रखें, कभी कोई टर्न न खोएँ।
 
-![dsh-session-sync का टर्मिनल डेमो: dsh-session-sync — mirror the session store, then /sync](https://raw.githubusercontent.com/PerryLink/dsh-session-sync/main/docs/assets/dsh-session-sync-hero.png)
+![dsh-session-sync कार्यप्रवाह आरेख: अनुरोध → नीति/समीक्षा → निर्णय।](docs/assets/dsh-session-sync-flow.svg)
 
-![Animated terminal demo of dsh-session-sync](https://raw.githubusercontent.com/PerryLink/dsh-session-sync/main/docs/assets/dsh-session-sync-demo.gif)
+*कार्यप्रवाह: अनुरोध → नीति/समीक्षा → निर्णय। नीचे के उदाहरण वास्तविक कमांड सतह का उपयोग करते हैं।*
+
 
 *वही रन, एनिमेटेड।*
 
@@ -115,6 +116,19 @@ dsh --profile web --dump-config | grep -A2 'id: session-sync'
 > /sync pull
 > /sync push
 ```
+
+### उदाहरण
+
+ये वास्तविक प्रवेश बिंदु हैं; इंस्टॉल के बाद एक चलाएँ।
+
+#### विस्तृत उदाहरण
+
+- `/sync status`
+
+#### संक्षिप्त उदाहरण
+
+- `/sync diff`
+- `/sync pull`
 
 ## कॉन्फ़िगरेशन
 

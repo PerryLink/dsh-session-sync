@@ -56,11 +56,11 @@ Cross-device session sync for DeepSeek Harness — a dedicated git mirror of you
 
 Sync your sessions between devices, keep both sides on any conflict, never lose a turn.
 
-![Terminal demo of dsh-session-sync: dsh-session-sync — mirror the session store, then /sync](https://raw.githubusercontent.com/PerryLink/dsh-session-sync/main/docs/assets/dsh-session-sync-hero.png)
+![Workflow diagram for dsh-session-sync: request → policy / review → verdict.](docs/assets/dsh-session-sync-flow.svg)
 
-![Animated terminal demo of dsh-session-sync](https://raw.githubusercontent.com/PerryLink/dsh-session-sync/main/docs/assets/dsh-session-sync-demo.gif)
+*Workflow overview: request → policy / review → verdict. The examples below use the real command surface.*
 
-*The same run, animated.*
+
 
 ## Compatibility
 
@@ -118,6 +118,19 @@ Then set the remote in your profile patch (a **private** repository is the basel
 > /sync pull
 > /sync push
 ```
+
+### Examples
+
+These are the plugin's real entry points; install once, then call one.
+
+#### Detailed example
+
+- `/sync status`
+
+#### Brief examples
+
+- `/sync diff`
+- `/sync pull`
 
 ## Configuration
 

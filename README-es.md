@@ -53,9 +53,10 @@ Sincronización de sesiones entre dispositivos para DeepSeek Harness — un espe
 
 Sincroniza tus sesiones entre dispositivos, conserva ambos lados ante cualquier conflicto, nunca pierdas un turno.
 
-![Demostración de terminal de dsh-session-sync: dsh-session-sync — mirror the session store, then /sync](https://raw.githubusercontent.com/PerryLink/dsh-session-sync/main/docs/assets/dsh-session-sync-hero.png)
+![Diagrama de flujo de dsh-session-sync: solicitud → política/revisión → veredicto.](docs/assets/dsh-session-sync-flow.svg)
 
-![Animated terminal demo of dsh-session-sync](https://raw.githubusercontent.com/PerryLink/dsh-session-sync/main/docs/assets/dsh-session-sync-demo.gif)
+*Resumen del flujo: solicitud → política/revisión → veredicto. Los ejemplos siguientes usan la superficie de comandos real.*
+
 
 *La misma ejecución, animada.*
 
@@ -115,6 +116,19 @@ Luego configura el remoto en tu parche de perfil (un repositorio **privado** es 
 > /sync pull
 > /sync push
 ```
+
+### Ejemplos
+
+Son los puntos de entrada reales; instala y llama a uno.
+
+#### Ejemplo detallado
+
+- `/sync status`
+
+#### Ejemplos breves
+
+- `/sync diff`
+- `/sync pull`
 
 ## Configuración
 
