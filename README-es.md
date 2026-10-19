@@ -142,6 +142,22 @@ sync: usage — /sync [status | pull | push | diff | log | help]
 
 *Observado en `index.mjs:754-765 (registered /sync handler)`*
 
+#### Rama de fallo
+
+**Entrada**
+
+~~~text
+/sync push
+~~~
+
+**Salida**
+
+~~~text
+sync: cancelled: approval requires an open turn; /sync commands run between turns — mount userQuestions or set confirmVia: userQuestions
+~~~
+
+*Observado en `plugins/dsh-session-sync/lib/gate.mjs:134-137; plugins/dsh-session-sync/index.mjs:792-794; plugins/dsh-session-sync/test/gate.test.mjs:80-88; plugins/dsh-session-sync/README.md:246`*
+
 #### Ejemplos breves
 
 - `/sync diff`

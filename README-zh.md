@@ -144,6 +144,22 @@ sync: usage — /sync [status | pull | push | diff | log | help]
 
 *来源 `index.mjs:754-765 (registered /sync handler)`*
 
+#### 失败分支
+
+**输入**
+
+~~~text
+/sync push
+~~~
+
+**输出**
+
+~~~text
+sync: cancelled: approval requires an open turn; /sync commands run between turns — mount userQuestions or set confirmVia: userQuestions
+~~~
+
+*来源 `plugins/dsh-session-sync/lib/gate.mjs:134-137; plugins/dsh-session-sync/index.mjs:792-794; plugins/dsh-session-sync/test/gate.test.mjs:80-88; plugins/dsh-session-sync/README.md:246`*
+
 #### 简短示例
 
 - `/sync diff`
