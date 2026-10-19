@@ -338,6 +338,8 @@ pnpm pack                                          # प्रकाशित ta
 | **[dsh-session-pin](https://github.com/PerryLink/dsh-session-pin)** | 🚫 सेवानिवृत्त — रिपॉज़िटरी README देखें |
 | **[dsh-team-rooms](https://github.com/PerryLink/dsh-team-rooms)** | 🚫 सेवानिवृत्त — रिपॉज़िटरी README देखें |
 
-</details>## लाइसेंस
+</details>
+
+## लाइसेंस
 
 [LICENSE](LICENSE) (Apache License 2.0) © 2026 dsh-session-sync contributors

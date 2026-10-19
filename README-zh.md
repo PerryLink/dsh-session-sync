@@ -340,6 +340,8 @@ pnpm pack                                          # 发布 tarball
 | **[dsh-session-pin](https://github.com/PerryLink/dsh-session-pin)** | 🚫 已退役 — 见仓库 README |
 | **[dsh-team-rooms](https://github.com/PerryLink/dsh-team-rooms)** | 🚫 已退役 — 见仓库 README |
 
-</details>## 许可证
+</details>
+
+## 许可证
 
 [LICENSE](LICENSE) (Apache License 2.0) © 2026 dsh-session-sync contributors
