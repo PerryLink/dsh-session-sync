@@ -236,6 +236,8 @@ There is no build step: pure ESM, `index.mjs` and `lib/` are the shipped artifac
 
 ## Contributors
 
+- [@BlakrPander](https://github.com/BlakrPander) — PAT-as-username redaction and the delete/modify keep-both analysis (#14); both halves shipped in 0.2.27/0.2.28.
+
 - [@PerryLink](https://github.com/PerryLink) — creator and maintainer: git mirror engine, append-only keep-both merge, `/sync` command and `sync_*` tools, auto modes, sanitizers, and the five-language docs.
 
 ## PerryLink DSH Plugin Family
