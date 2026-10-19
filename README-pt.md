@@ -123,7 +123,24 @@ São os pontos de entrada reais; instale e chame um.
 
 #### Exemplo detalhado
 
-- `/sync status`
+**Comando**
+
+~~~sh
+/sync help
+~~~
+
+**Saída**
+
+~~~text
+sync: usage — /sync [status | pull | push | diff | log | help]
+  status  show mirror state (default): branch, remote, ahead/behind, dirty, forks
+  pull    fetch + merge remote changes (keep-both; confirms first)
+  push    mirror + commit + push local changes (confirms first)
+  diff    uncommitted changes + HEAD..remote stat (read-only)
+  log     last commits in the sync repository
+~~~
+
+*Observado em `index.mjs:754-765 (registered /sync handler)`*
 
 #### Exemplos breves
 
