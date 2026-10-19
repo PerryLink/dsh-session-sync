@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.2.30] - 2026-10-19
+
+### Fixed
+
+- Restore the CI type gate: complete the mirror/restore result types (`remotePreserved`, `snapshotUnknown`, `tracked`) and dedupe schemastery 3.18.5 types in the workspace. Runtime behavior is unchanged.
+
 ## [0.2.29] - 2026-10-19
 
 ### Fixed
