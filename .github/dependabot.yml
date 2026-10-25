@@ -16,6 +16,10 @@ updates:
       # zod stays on the host's 4.4.3: 4.6.x duplicates the ZodType identity
       # used by @deepseek-ai/schemastery and breaks `tsc`.
       - dependency-name: "zod"
+      # Dependabot cannot produce a lockfile change for this peer: it resolves
+      # 3.18.5-alpha.1 to 3.18.5 and then reports NoChangeError (dynamic run
+      # 40108372183, 2026-10-24). Keep it out of the updater until fixed.
+      - dependency-name: "@deepseek-ai/schemastery"
   - package-ecosystem: github-actions
     directory: /
     schedule:
