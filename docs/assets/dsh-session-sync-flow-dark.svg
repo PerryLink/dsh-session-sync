@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="400" viewBox="0 0 1200 400" role="img" aria-label="dsh-session-sync data flow">
+<title>dsh-session-sync data flow</title>
+<rect width="1200" height="400" rx="18" fill="#0d1117"/>
+<text x="60" y="58" fill="#f0f6fc" font-family="ui-sans-serif,system-ui,sans-serif" font-size="30" font-weight="700">dsh-session-sync</text>
+<text x="60" y="90" fill="#8b949e" font-family="ui-monospace,monospace" font-size="16">git mirror of the session store · append-only keep-both merge</text>
+<line x1="60" y1="112" x2="1140" y2="112" stroke="#30363d"/>
+<rect x="62" y="150" width="156" height="88" rx="14" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+<text x="140" y="188" fill="#f0f6fc" text-anchor="middle" font-family="ui-monospace,monospace" font-size="13" font-weight="700">$DSH_HOME/sessions</text>
+<text x="140" y="214" fill="#8b949e" text-anchor="middle" font-family="ui-monospace,monospace" font-size="11">session bytes</text>
+<path d="M221 194h16" stroke="#8b949e" stroke-width="3"/>
+<path d="M235 187l10 7-10 7" fill="none" stroke="#8b949e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="246" y="150" width="156" height="88" rx="14" fill="#161b22" stroke="#4B67B4" stroke-width="2"/>
+<text x="324" y="188" fill="#f0f6fc" text-anchor="middle" font-family="ui-monospace,monospace" font-size="13" font-weight="700">mirror</text>
+<text x="324" y="214" fill="#8b949e" text-anchor="middle" font-family="ui-monospace,monospace" font-size="11">opaque copy</text>
+<path d="M405 194h16" stroke="#8b949e" stroke-width="3"/>
+<path d="M419 187l10 7-10 7" fill="none" stroke="#8b949e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="430" y="150" width="156" height="88" rx="14" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+<text x="508" y="188" fill="#f0f6fc" text-anchor="middle" font-family="ui-monospace,monospace" font-size="13" font-weight="700">commit</text>
+<text x="508" y="214" fill="#8b949e" text-anchor="middle" font-family="ui-monospace,monospace" font-size="11">plugin identity</text>
+<path d="M589 194h16" stroke="#8b949e" stroke-width="3"/>
+<path d="M603 187l10 7-10 7" fill="none" stroke="#8b949e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="614" y="150" width="156" height="88" rx="14" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+<text x="692" y="188" fill="#f0f6fc" text-anchor="middle" font-family="ui-monospace,monospace" font-size="13" font-weight="700">push</text>
+<text x="692" y="214" fill="#8b949e" text-anchor="middle" font-family="ui-monospace,monospace" font-size="11">git + age</text>
+<path d="M773 194h16" stroke="#8b949e" stroke-width="3"/>
+<path d="M787 187l10 7-10 7" fill="none" stroke="#8b949e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="798" y="150" width="156" height="88" rx="14" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+<text x="876" y="188" fill="#f0f6fc" text-anchor="middle" font-family="ui-monospace,monospace" font-size="13" font-weight="700">your remote</text>
+<text x="876" y="214" fill="#8b949e" text-anchor="middle" font-family="ui-monospace,monospace" font-size="11">private repo</text>
+<path d="M957 194h16" stroke="#8b949e" stroke-width="3"/>
+<path d="M971 187l10 7-10 7" fill="none" stroke="#8b949e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="982" y="150" width="156" height="88" rx="14" fill="#161b22" stroke="#4B67B4" stroke-width="2"/>
+<text x="1060" y="188" fill="#f0f6fc" text-anchor="middle" font-family="ui-monospace,monospace" font-size="13" font-weight="700">pull</text>
+<text x="1060" y="214" fill="#8b949e" text-anchor="middle" font-family="ui-monospace,monospace" font-size="11">fetch + merge</text>
+<path d="M324 238v48" stroke="#4B67B4" stroke-width="2" stroke-dasharray="5 5"/>
+<path d="M1060 238v48" stroke="#4B67B4" stroke-width="2" stroke-dasharray="5 5"/>
+<rect x="300" y="286" width="784" height="50" rx="12" fill="#161b22" stroke="#4B67B4" stroke-width="2"/>
+<text x="692" y="317" fill="#f0f6fc" text-anchor="middle" font-family="ui-monospace,monospace" font-size="13">append-only three-way merge · keep both + fork file · never force-push</text>
+<text x="60" y="378" fill="#8b949e" font-family="ui-monospace,monospace" font-size="13">backend: git | encrypted (age) · /sync status: branch · ahead/behind · dirty · forks</text>
+</svg>
