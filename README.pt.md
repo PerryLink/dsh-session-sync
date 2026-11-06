@@ -1,8 +1,8 @@
 <div align="center">
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/dsh-session-sync-flow-dark.svg">
-  <img src="docs/assets/dsh-session-sync-flow-light.svg" width="100%" alt="Fluxo de dados do dsh-session-sync: $DSH_HOME/sessions → espelho → commit → push → seu remoto git → pull → merge de três vias append-only com manter-ambos + arquivos fork, sem force-push">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/dsh-session-sync-hero-en-dark.webp">
+  <img src="docs/assets/dsh-session-sync-hero-en-light.webp" width="100%" alt="dsh-session-sync: dois dispositivos copiam $DSH_HOME/sessions como bytes opacos para um worktree git e sincronizam com um remoto próprio; o pull faz um merge de três vias por arquivo que mantém os dois lados (a versão remota como arquivo fork) e nunca faz force-push.">
 </picture>
 
 # dsh-session-sync
@@ -37,6 +37,13 @@ dsh plugin --profile <name> add dsh-session-sync
 ## O que é
 
 O `dsh-session-sync` espelha o armazenamento de sessões do DSH (`$DSH_HOME/sessions`) em um worktree git dedicado e o sincroniza com um remoto que **você** controla: sem serviço na nuvem, sem armazenamento de terceiros. Os arquivos de sessão são copiados como bytes opacos — o plugin nunca analisa JSONL/zstd, porque a codificação física pertence ao harness; o trabalho dele é mover esses bytes, mesclar históricos append-only e relatar o estado. Diante de qualquer divergência ele executa um merge de três vias append-only: **os dois lados são mantidos**, a versão remota é preservada como arquivos fork e nada é sobrescrito em silêncio. `backend: git` (o padrão) é um espelho em texto plano; `backend: encrypted` adiciona uma camada age por cima; todos os modos automáticos são configuráveis e reversíveis.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/dsh-session-sync-flow-v5-dark.svg">
+    <img src="docs/assets/dsh-session-sync-flow-v5-light.svg" width="100%" alt="Estrutura do dsh-session-sync: o dispositivo A espelha os bytes e confirma $DSH_HOME/sessions, e o push cruza o portão de confirmação até o seu remoto git; o dispositivo B faz fetch, executa um merge de três vias por arquivo (base/ours/theirs) e restaura as sessões localmente, mantendo os bytes remotos divergentes como arquivos fork no caminho original; arquivos fork nunca são apagados nem sobrescritos.">
+  </picture>
+</p>
 
 ## Instalação em três passos
 

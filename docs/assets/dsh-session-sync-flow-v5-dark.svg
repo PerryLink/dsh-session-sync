@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="660" viewBox="0 0 1100 660" role="img" aria-label="dsh-session-sync structure diagram">
+<title>dsh-session-sync structure: byte mirror, owned git remote, keep-both fork</title>
+<desc>Device A mirrors the session store as opaque bytes and commits; push crosses a confirmation gate into the git remote you own. Device B fetches, runs a per-file three-way merge (base, ours, theirs) and restores sessions. Divergent remote bytes become fork files at the original path, never overwritten and never force-pushed.</desc>
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#131a2a"/><stop offset="1" stop-color="#0c1016"/></linearGradient>
+<radialGradient id="glow" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#8496f5" stop-opacity=".18"/><stop offset="1" stop-color="#8496f5" stop-opacity="0"/></radialGradient>
+<filter id="soft" x="-15%" y="-15%" width="130%" height="140%"><feDropShadow dx="0" dy="6" stdDeviation="9" flood-color="#000000" flood-opacity=".38"/></filter>
+<marker id="ar" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8496f5"/></marker>
+<marker id="ar-soft" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#93a0c0"/></marker>
+</defs>
+<style>
+.h1{font-family:'Microsoft YaHei','Segoe UI',system-ui,sans-serif;font-size:26px;font-weight:700;fill:#eef1ff}
+.sub{font-family:'Microsoft YaHei','Segoe UI',system-ui,sans-serif;font-size:12.5px;fill:#c2cbe4}
+.k{font-family:'Segoe UI',system-ui,sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;fill:#8496f5}
+.ptitle{font-family:'Microsoft YaHei','Segoe UI',system-ui,sans-serif;font-size:18px;font-weight:700;fill:#eef1ff}
+.pnote{font-family:'Microsoft YaHei','Segoe UI',system-ui,sans-serif;font-size:11px;fill:#93a0c0}
+.ctitle{font-family:'Microsoft YaHei','Segoe UI',system-ui,sans-serif;font-size:15px;font-weight:700;fill:#eef1ff}
+.mtitle{font-family:'Consolas',ui-monospace,monospace;font-size:13.5px;font-weight:700;fill:#eef1ff}
+.note{font-family:'Microsoft YaHei','Segoe UI',system-ui,sans-serif;font-size:11px;fill:#c2cbe4}
+.muted{font-family:'Microsoft YaHei','Segoe UI',system-ui,sans-serif;font-size:11px;fill:#93a0c0}
+.mono{font-family:'Consolas',ui-monospace,monospace;font-size:11px;fill:#c2cbe4}
+.mono-a{font-family:'Consolas',ui-monospace,monospace;font-size:11px;fill:#aebcff}
+.lbl{font-family:'Segoe UI',system-ui,sans-serif;font-size:11px;font-weight:700;fill:#aebcff}
+.foot{font-family:'Microsoft YaHei','Segoe UI',system-ui,sans-serif;font-size:11px;fill:#93a0c0}
+</style>
+<rect width="1100" height="660" rx="22" fill="url(#bg)"/>
+<ellipse cx="960" cy="80" rx="300" ry="170" fill="url(#glow)"/>
+<ellipse cx="150" cy="600" rx="260" ry="130" fill="url(#glow)" opacity=".55"/>
+<text x="48" y="52" class="k">DSH PLUGIN · SESSION SYNC</text>
+<text x="47" y="86" class="h1">Byte mirror → owned remote → keep-both</text>
+<text x="48" y="110" class="sub">Session files move as opaque bytes; divergent histories keep both sides as fork files.</text>
+<line x1="48" y1="126" x2="1052" y2="126" stroke="#2c3852" stroke-width="1"/>
+<rect x="48" y="140" width="332" height="338" rx="20" fill="#161e2e" fill-opacity=".90" stroke="#2c3852" filter="url(#soft)"/>
+<text x="68" y="166" class="k">DEVICE A · LOCAL</text>
+<text x="68" y="192" class="ptitle">Byte mirror &amp; commit</text>
+<text x="68" y="210" class="pnote">push path · manual writes confirm</text>
+<rect x="66" y="218" width="296" height="64" rx="18" fill="#1b2436" fill-opacity=".94" stroke="#33405e"/>
+<text x="84" y="242" class="mtitle">$DSH_HOME/sessions</text>
+<text x="84" y="260" class="note">opaque session bytes · JSONL/zstd untouched</text>
+<text x="84" y="276" class="muted">session.lock &amp; migration temp files excluded</text>
+<line x1="120" y1="282" x2="120" y2="300" stroke="#8496f5" stroke-width="2" marker-end="url(#ar)"/>
+<text x="134" y="299" class="lbl">byte mirror</text>
+<rect x="66" y="306" width="296" height="64" rx="18" fill="#1b2436" fill-opacity=".94" stroke="#33405e"/>
+<text x="84" y="330" class="mtitle">&lt;repoDir&gt;/sessions</text>
+<text x="84" y="348" class="note">dedicated git worktree · plaintext mirror</text>
+<text x="84" y="364" class="muted">symlinks refused · paths contained</text>
+<line x1="120" y1="370" x2="120" y2="388" stroke="#8496f5" stroke-width="2" marker-end="url(#ar)"/>
+<text x="134" y="387" class="lbl">commit</text>
+<rect x="66" y="394" width="296" height="64" rx="18" fill="#1b2436" fill-opacity=".94" stroke="#33405e"/>
+<text x="84" y="418" class="mtitle">local commit</text>
+<text x="84" y="436" class="note">plugin identity (never your git identity)</text>
+<text x="84" y="452" class="muted">device.txt recorded for fork attribution</text>
+<rect x="420" y="140" width="260" height="338" rx="20" fill="#8496f5" fill-opacity=".12" stroke="#8496f5" stroke-opacity=".34" filter="url(#soft)"/>
+<rect x="421" y="162" width="6" height="296" rx="3" fill="#8496f5" fill-opacity=".55"/>
+<text x="444" y="166" class="k">YOUR GIT REMOTE</text>
+<text x="444" y="192" class="ptitle">your repo</text>
+<text x="444" y="212" class="mono">branch: main</text>
+<line x1="480" y1="242" x2="480" y2="430" stroke="#8496f5" stroke-width="2.5"/>
+<circle cx="480" cy="252" r="5.5" fill="#1b2436" stroke="#8496f5" stroke-width="2.5"/>
+<circle cx="480" cy="296" r="5.5" fill="#1b2436" stroke="#8496f5" stroke-width="2.5"/>
+<circle cx="480" cy="340" r="5.5" fill="#1b2436" stroke="#8496f5" stroke-width="2.5"/>
+<circle cx="480" cy="384" r="5.5" fill="#1b2436" stroke="#8496f5" stroke-width="2.5"/>
+<circle cx="480" cy="428" r="5.5" fill="#1b2436" stroke="#8496f5" stroke-width="2.5"/>
+<text x="512" y="302" class="note">never force-push,</text>
+<text x="512" y="320" class="note">reset or rebase</text>
+<text x="512" y="354" class="muted">backend: git | encrypted</text>
+<text x="512" y="372" class="muted">age layer: *.age optional</text>
+<rect x="720" y="140" width="332" height="338" rx="20" fill="#161e2e" fill-opacity=".90" stroke="#2c3852" filter="url(#soft)"/>
+<text x="740" y="166" class="k">DEVICE B · LOCAL</text>
+<text x="740" y="192" class="ptitle">Pull, merge &amp; restore</text>
+<text x="740" y="210" class="pnote">pull path · manual writes confirm</text>
+<rect x="738" y="218" width="296" height="64" rx="18" fill="#1b2436" fill-opacity=".94" stroke="#33405e"/>
+<text x="756" y="242" class="mtitle">fetch origin/main</text>
+<text x="756" y="260" class="note">remote refs only · worktree untouched</text>
+<text x="756" y="276" class="muted">three-way merge stays local</text>
+<line x1="760" y1="282" x2="760" y2="300" stroke="#8496f5" stroke-width="2" marker-end="url(#ar)"/>
+<text x="774" y="299" class="lbl">beginMerge</text>
+<rect x="738" y="306" width="296" height="78" rx="18" fill="#1b2436" fill-opacity=".94" stroke="#33405e"/>
+<text x="756" y="330" class="ctitle">three-way merge</text>
+<rect x="756" y="340" width="70" height="22" rx="7" fill="#202a40" stroke="#3a4770"/>
+<text x="791" y="355" class="mono" text-anchor="middle">base</text>
+<rect x="834" y="340" width="70" height="22" rx="7" fill="#202a40" stroke="#3a4770"/>
+<text x="869" y="355" class="mono" text-anchor="middle">ours</text>
+<rect x="912" y="340" width="70" height="22" rx="7" fill="#202a40" stroke="#3a4770"/>
+<text x="947" y="355" class="mono" text-anchor="middle">theirs</text>
+<text x="756" y="378" class="note">per-file byte compare · no parsing</text>
+<line x1="760" y1="384" x2="760" y2="402" stroke="#8496f5" stroke-width="2" marker-end="url(#ar)"/>
+<text x="774" y="401" class="lbl">keep-both</text>
+<rect x="738" y="408" width="296" height="62" rx="18" fill="#1b2436" fill-opacity=".94" stroke="#33405e"/>
+<text x="756" y="432" class="ctitle">merge commit + restore</text>
+<text x="756" y="450" class="note">sessions resume on this device</text>
+<text x="756" y="466" class="muted">fork files never deleted</text>
+<line x1="380" y1="428" x2="472" y2="428" stroke="#8496f5" stroke-width="2.5" marker-end="url(#ar)"/>
+<text x="382" y="418" class="lbl">push</text>
+<line x1="484" y1="252" x2="730" y2="252" stroke="#8496f5" stroke-width="2.5" marker-end="url(#ar)"/>
+<text x="690" y="243" class="lbl">pull</text>
+<rect x="48" y="492" width="1004" height="140" rx="20" fill="#161e2e" fill-opacity=".90" stroke="#2c3852" filter="url(#soft)"/>
+<text x="68" y="522" class="k">KEEP-BOTH · PER-FILE VERDICT</text>
+<text x="68" y="550" class="ctitle">Never silently overwrite</text>
+<text x="68" y="576" class="note">same bytes or ours-only → keep ours</text>
+<text x="68" y="592" class="note">theirs-only → adopt the remote bytes</text>
+<text x="68" y="608" class="note">both advanced / rewritten → keep ours + fork</text>
+<rect x="372" y="548" width="66" height="34" rx="10" fill="#202a40" stroke="#3a4770"/>
+<text x="405" y="570" class="mono" text-anchor="middle">base</text>
+<path d="M438 565 C464 565 560 550 634 556" fill="none" stroke="#8496f5" stroke-width="1.6" stroke-opacity=".72"/>
+<rect x="446" y="548" width="66" height="34" rx="10" fill="#202a40" stroke="#3a4770"/>
+<text x="479" y="570" class="mono" text-anchor="middle">ours</text>
+<path d="M512 565 C538 565 560 550 634 556" fill="none" stroke="#8496f5" stroke-width="1.6" stroke-opacity=".72"/>
+<rect x="520" y="548" width="66" height="34" rx="10" fill="#202a40" stroke="#3a4770"/>
+<text x="553" y="570" class="mono" text-anchor="middle">theirs</text>
+<path d="M586 565 C612 565 600 550 634 556" fill="none" stroke="#8496f5" stroke-width="1.6" stroke-opacity=".72"/>
+<path d="M640 565 L700 531 L760 565 L700 599 Z" fill="#8496f5" fill-opacity=".14" stroke="#8496f5" stroke-width="1.8" stroke-linejoin="round"/>
+<text x="700" y="562" class="lbl" text-anchor="middle">classify</text>
+<text x="700" y="578" class="mono" text-anchor="middle">per file</text>
+<path d="M760 565 C780 565 782 544 800 544" fill="none" stroke="#8496f5" stroke-width="1.8" marker-end="url(#ar)"/>
+<path d="M760 565 C780 565 782 600 800 600" fill="none" stroke="#8496f5" stroke-width="1.8" marker-end="url(#ar)"/>
+<rect x="800" y="520" width="228" height="46" rx="18" fill="#1b2436" fill-opacity=".94" stroke="#33405e"/>
+<text x="816" y="540" class="lbl">ours</text>
+<text x="816" y="556" class="note">kept at the original path</text>
+<rect x="800" y="574" width="228" height="52" rx="18" fill="#8496f5" fill-opacity=".10" stroke="#8496f5" stroke-width="1.5"/>
+<text x="816" y="594" class="lbl">theirs → fork file</text>
+<text x="816" y="610" class="mono">&lt;basename&gt;.remote-fork-</text>
+<text x="816" y="624" class="mono">&lt;UTC14&gt;-&lt;device8&gt;</text>
+<text x="550" y="652" class="foot" text-anchor="middle">Fork files are never deleted or overwritten · each device can push and pull · auto: on mount, turn end, every N minutes</text>
+</svg>

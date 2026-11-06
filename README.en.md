@@ -1,8 +1,8 @@
 <div align="center">
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/dsh-session-sync-flow-dark.svg">
-  <img src="docs/assets/dsh-session-sync-flow-light.svg" width="100%" alt="dsh-session-sync data flow: $DSH_HOME/sessions → mirror → commit → push → your git remote → pull → append-only three-way merge with keep-both + fork files, never force-pushing">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/dsh-session-sync-hero-en-dark.webp">
+  <img src="docs/assets/dsh-session-sync-hero-en-light.webp" width="100%" alt="dsh-session-sync: two devices mirror $DSH_HOME/sessions as opaque bytes into a git worktree, commit and sync to a remote you own; pull runs a per-file three-way merge that keeps both sides (the remote version as a fork file) and never force-pushes.">
 </picture>
 
 # dsh-session-sync
@@ -37,6 +37,13 @@ dsh plugin --profile <name> add dsh-session-sync
 ## What it is
 
 `dsh-session-sync` mirrors the DSH session store (`$DSH_HOME/sessions`) into a dedicated git worktree and syncs it to a remote **you** control: no cloud service, no third-party storage. Session files are copied as opaque bytes — the plugin never parses JSONL/zstd, since the physical encoding belongs to the harness; its job is to move those bytes, merge append-only histories, and report state. On any divergence it runs an append-only three-way merge: **both sides are kept**, the remote version is preserved as fork files, and nothing is silently overwritten. `backend: git` (the default) is a plaintext mirror; `backend: encrypted` adds an age layer above it; every auto mode is configurable and reversible.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/dsh-session-sync-flow-v5-dark.svg">
+    <img src="docs/assets/dsh-session-sync-flow-v5-light.svg" width="100%" alt="dsh-session-sync structure: device A byte-mirrors and commits $DSH_HOME/sessions, then push crosses the confirmation gate into the git remote you own; device B fetches, runs a per-file three-way merge (base/ours/theirs) and restores the sessions locally, keeping divergent remote bytes as fork files at the original path; fork files are never deleted or overwritten.">
+  </picture>
+</p>
 
 ## Three-step setup
 

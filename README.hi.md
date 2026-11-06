@@ -1,8 +1,8 @@
 <div align="center">
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/dsh-session-sync-flow-dark.svg">
-  <img src="docs/assets/dsh-session-sync-flow-light.svg" width="100%" alt="dsh-session-sync डेटा प्रवाह: $DSH_HOME/sessions → मिरर → commit → push → आपका git रिमोट → pull → append-only तीन-तरफ़ा merge (दोनों पक्ष सुरक्षित + fork फ़ाइलें), कभी force-push नहीं">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/dsh-session-sync-hero-en-dark.webp">
+  <img src="docs/assets/dsh-session-sync-hero-en-light.webp" width="100%" alt="dsh-session-sync: दो डिवाइस $DSH_HOME/sessions को अपारदर्शी बाइट्स के रूप में git worktree में मिरर करके आपके अपने रिमोट से सिंक करते हैं; pull पर प्रति-फ़ाइल तीन-तरफ़ा merge दोनों पक्ष रखता है (रिमोट संस्करण fork फ़ाइल के रूप में) और कभी force-push नहीं करता।">
 </picture>
 
 # dsh-session-sync
@@ -37,6 +37,13 @@ dsh plugin --profile <name> add dsh-session-sync
 ## यह क्या है
 
 `dsh-session-sync` DSH सत्र संग्रह (`$DSH_HOME/sessions`) को एक समर्पित git worktree में मिरर करता है और उसे उस रिमोट से सिंक करता है जिसे **आप** नियंत्रित करते हैं: कोई क्लाउड सेवा नहीं, कोई तृतीय-पक्ष संग्रहण नहीं। सत्र फ़ाइलें अपारदर्शी बाइट्स के रूप में कॉपी होती हैं — प्लगइन JSONL/zstd को कभी पार्स नहीं करता, क्योंकि भौतिक एन्कोडिंग harness की है; उसका काम है उन बाइट्स को ले जाना, append-only इतिहास को merge करना और स्थिति बताना। किसी भी विचलन पर वह append-only तीन-तरफ़ा merge चलाता है: **दोनों पक्ष सुरक्षित रहते हैं**, रिमोट संस्करण fork फ़ाइलों के रूप में बचा रहता है, और कुछ भी चुपचाप अधिलिखित नहीं होता। `backend: git` (डिफ़ॉल्ट) plaintext मिरर है; `backend: encrypted` उसके ऊपर age परत जोड़ता है; सभी ऑटो मोड कॉन्फ़िगर करने योग्य और प्रतिवर्ती हैं।
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/dsh-session-sync-flow-v5-dark.svg">
+    <img src="docs/assets/dsh-session-sync-flow-v5-light.svg" width="100%" alt="dsh-session-sync संरचना: डिवाइस A $DSH_HOME/sessions को बाइट-मिरर और commit करता है, फिर push पुष्टि गेट से होकर आपके git रिमोट तक जाता है; डिवाइस B fetch करता है, प्रति-फ़ाइल तीन-तरफ़ा merge (base/ours/theirs) चलाता है और सत्रों को स्थानीय रूप से पुनर्स्थापित करता है, विचलित रिमोट बाइट्स को मूल पथ पर fork फ़ाइलों के रूप में रखता है; fork फ़ाइलें कभी हटाई या अधिलिखित नहीं होतीं।">
+  </picture>
+</p>
 
 ## तीन चरणों में शुरुआत
 

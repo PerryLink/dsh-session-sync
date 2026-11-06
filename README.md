@@ -1,8 +1,8 @@
 <div align="center">
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/dsh-session-sync-flow-dark.svg">
-  <img src="docs/assets/dsh-session-sync-flow-light.svg" width="100%" alt="dsh-session-sync 数据流：$DSH_HOME/sessions → 镜像 → 提交 → 推送 → 你的 git 远端 → 拉取 → append-only 三方合并（两边保留 + fork 文件），绝不强推">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/dsh-session-sync-hero-zh-dark.webp">
+  <img src="docs/assets/dsh-session-sync-hero-zh-light.webp" width="100%" alt="dsh-session-sync：两台设备把 $DSH_HOME/sessions 按不透明字节镜像进 git 工作树并提交，推送到你自己的远端；拉取时逐文件三方合并，分歧两边都留（远端版本存为 fork 文件），绝不 force-push。">
 </picture>
 
 # dsh-session-sync
@@ -37,6 +37,13 @@ dsh plugin --profile <name> add dsh-session-sync
 ## 它是什么
 
 `dsh-session-sync` 把 DSH 会话存储（`$DSH_HOME/sessions`）镜像到一个专用 git 工作树，再同步到**你自己**控制的远端：没有云服务，没有第三方存储。会话文件按不透明字节复制，插件从不解析 JSONL/zstd——物理编码属于 harness，插件的职责只是搬运字节、合并 append-only 历史并报告状态。发生分歧时走 append-only 三方合并：**两边都保留**，远端版本留存为 fork 文件，绝不静默覆盖。默认 `backend: git` 是明文镜像；`backend: encrypted` 在镜像之上加一层 age 加密；自动模式全部可配置、可逆。
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/dsh-session-sync-flow-v5-dark.svg">
+    <img src="docs/assets/dsh-session-sync-flow-v5-light.svg" width="100%" alt="dsh-session-sync 结构图：设备 A 的 $DSH_HOME/sessions 经字节镜像与提交，越过确认门推送到你自己的 git 远端；设备 B 拉取后逐文件三方合并（base/ours/theirs），再把会话恢复到本机，分歧时本地保留原路径、远端字节存为 fork 文件；fork 文件永不被删除或覆盖。">
+  </picture>
+</p>
 
 ## 三步上手
 
