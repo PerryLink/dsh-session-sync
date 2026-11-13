@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.2.33] - 2026-11-13
+
+### Fixed
+
+- **`pull()` no longer dies on `fatal: stash failed`.** A tracked DSH atomic-write staging file (`.l2s.<payload>.<hash>.tmp<seq>.<seq>`) keeps the work tree stat-dirty while its content is unchanged; `git merge` then takes the autostash path, `git stash create` prints nothing, and git aborts. The index is refreshed before every merge, and host staging artifacts are now excluded from the mirror and the delete set at the source. Fixes #29.
+- **A merge that never started is no longer reported as "already up to date".** `beginMerge()` treated any non-zero merge exit without `MERGE_HEAD` as a no-op, so `pull()` returned `ok: true`, `lastPullAt` advanced, and the repository stayed divergent forever. It now throws `GIT_FAILED` with the sanitized stderr tail. Fixes #29.
+- **`lastError` is cleared by the next successful pull or push**, so a days-old failure no longer frames the current symptom. Fixes #29.
+- **`sync_status` returns lossless JSON.** Undefined `lastPullAt` / `lastPushAt` / `lastError` (and `head` / `remoteHead` / `error` from an empty repo) were spread into the tool result, which the host rejects with `value is not lossless JSON`; undefined keys are now omitted. Fixes #29.
+
 ## [0.2.32] - 2026-11-05
 
 ### Changed

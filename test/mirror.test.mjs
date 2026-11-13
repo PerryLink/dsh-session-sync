@@ -149,6 +149,7 @@ test('host-private artifacts never enter the mirror, generation logs always do',
   await fs.mkdir(path.join(src, 's1'), { recursive: true })
   await fs.writeFile(path.join(src, 's1', 'session.lock'), '{"pid":1}')
   await fs.writeFile(path.join(src, 's1', 'session.migration.ab12cd.jsonl.tmp'), 'partial\n')
+  await fs.writeFile(path.join(src, 's1', '.l2s.session.v4.jsonl.zstd.104042de54c8.tmp0001.0001'), 'staging\n')
   await fs.writeFile(path.join(src, 's1', 'session.jsonl'), 'v0 payload\n')
   await fs.writeFile(path.join(src, 's1', 'session.v2.jsonl.zstd'), Buffer.from([0x28, 0xb5, 0x2f, 0xfd]))
 
@@ -162,9 +163,10 @@ test('host-private artifacts never enter the mirror, generation logs always do',
   )
   // 瞬时产物两个都不进镜像、且不计入 mirrored/unchanged。
   assert.equal(result.mirrored, 2)
-  assert.equal(result.hostArtifactsSkipped, 2)
+  assert.equal(result.hostArtifactsSkipped, 3)
   await assert.rejects(fs.access(path.join(repo, 'sessions', 's1', 'session.lock')))
   await assert.rejects(fs.access(path.join(repo, 'sessions', 's1', 'session.migration.ab12cd.jsonl.tmp')))
+  await assert.rejects(fs.access(path.join(repo, 'sessions', 's1', '.l2s.session.v4.jsonl.zstd.104042de54c8.tmp0001.0001')))
 
   // 文件数守恒：镜像树 = 源树文件数 − 被跳过的宿主产物数。
   const countFiles = async (dir) => {
@@ -197,6 +199,7 @@ test('a target-side host-private artifact is preserved, never deleted', async (t
   // 目标侧已有另一设备提交/持有的租约与迁移暂存：源侧没有它们。
   await fs.writeFile(path.join(repo, 'sessions', 's1', 'session.lock'), '{"pid":9}')
   await fs.writeFile(path.join(repo, 'sessions', 's1', 'session.migration.zz99.jsonl.tmp'), 'stale\n')
+  await fs.writeFile(path.join(repo, 'sessions', 's1', '.l2s.session.v4.jsonl.zstd.0f21dd92d601.tmp0001.0001'), 'stale staging\n')
   // 源侧删掉 obsolete.jsonl：它进过上一次快照，且不受白名单保护 → 仍必须被删
   // （删除语义未被本次改动削弱）。
   await fs.unlink(path.join(src, 's1', 'obsolete.jsonl'))
@@ -205,7 +208,8 @@ test('a target-side host-private artifact is preserved, never deleted', async (t
 
   assert.equal(await fs.readFile(path.join(repo, 'sessions', 's1', 'session.lock'), 'utf8'), '{"pid":9}')
   assert.equal(await fs.readFile(path.join(repo, 'sessions', 's1', 'session.migration.zz99.jsonl.tmp'), 'utf8'), 'stale\n')
-  assert.deepEqual(result.hostArtifactsPreserved, ['s1/session.lock', 's1/session.migration.zz99.jsonl.tmp'].sort())
+  assert.equal(await fs.readFile(path.join(repo, 'sessions', 's1', '.l2s.session.v4.jsonl.zstd.0f21dd92d601.tmp0001.0001'), 'utf8'), 'stale staging\n')
+  assert.deepEqual(result.hostArtifactsPreserved, ['s1/session.lock', 's1/session.migration.zz99.jsonl.tmp', 's1/.l2s.session.v4.jsonl.zstd.0f21dd92d601.tmp0001.0001'].sort())
   assert.deepEqual(result.deleted, ['s1/obsolete.jsonl'])
 })
 

@@ -134,3 +134,19 @@ test('disposing the contributing fiber removes /sync and the sync_* tools', asyn
     await harness.ctx.fiber.dispose()
   }
 })
+
+// ---------------------------------------------------------------------------
+// C3：sync_status 的结果必须能被宿主当作 lossless JSON（#29）
+// ---------------------------------------------------------------------------
+
+test('sync_status never returns undefined-valued fields', async () => {
+  const harness = await mountHarness()
+  try {
+    const tool = harness.ctx.tools.get('sync_status')
+    const result = await tool.execute({}, /** @type {any} */ ({}))
+    // 展开 undefined 的元数据键会让宿主按 "value is not lossless JSON" 拒绝整个结果。
+    assert.deepEqual(JSON.parse(JSON.stringify(result)), result)
+  } finally {
+    await harness.ctx.fiber.dispose()
+  }
+})

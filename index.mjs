@@ -396,7 +396,17 @@ export function makeSyncStatusTool(engine, readMeta) {
       const status = await engine.status()
       try {
         const meta = await readMeta()
-        return { ...status, lastPullAt: meta.lastPullAt, lastPushAt: meta.lastPushAt, lastError: meta.lastError }
+        // 只合并有值的键：把 undefined 展开进工具结果会让宿主按
+        // “value is not lossless JSON” 拒绝整个 sync_status 结果（#29）。
+        const extra = {}
+        if (meta.lastPullAt !== undefined) extra.lastPullAt = meta.lastPullAt
+        if (meta.lastPushAt !== undefined) extra.lastPushAt = meta.lastPushAt
+        if (meta.lastError !== undefined) extra.lastError = meta.lastError
+        const out = { ...status, ...extra }
+        // 工具结果必须是 lossless JSON：collectStatus 的 head/remoteHead/error
+        // 在空仓库或未配置远端时是 undefined，展开后会让宿主拒绝整个结果。
+        for (const key of Object.keys(out)) if (out[key] === undefined) delete out[key]
+        return out
       } catch {
         return status
       }
@@ -621,6 +631,8 @@ export function apply(ctx, config = {}) {
       try {
         const current = await ensureMeta()
         const next = { ...current, ...patch }
+        // `undefined` 表示删除该键（清空 lastError），而不是写入一个非 JSON 值。
+        for (const key of Object.keys(patch)) if (patch[key] === undefined) delete next[key]
         const table = await tablePromise
         await table.put(STATE_KEY, next)
         metaCache = next
