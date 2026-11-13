@@ -6,6 +6,9 @@
 // `<root>/<projectKey(header.cwd)>/<sessionId>/<file>`，因此这条断言同时钉住
 // 我们的 projectKey 复刻、目录布局与 header 改写。
 //
+// 用例在两个方向上对称：非 Windows 用 `C:\Users\…`（另一平台的绝对路径），
+// Windows 用 `/home/…`（同样在 win32 上 root 为 `/`，属于非本机绝对路径）。
+//
 // @module dsh-session-sync/test/cwdmap.test
 
 import { test } from 'node:test'
@@ -30,8 +33,11 @@ import { makeSyncStatusTool, renderStatus, resolveConfig } from '../index.mjs'
 
 const ZSTD_OPTIONS = { params: { [constants.ZSTD_c_checksumFlag]: 1 } }
 const SESSION_ID = 'session-11111111-2222-3333-4444-555555555555'
-const WINDOWS_CWD = 'C:\\Users\\me\\proj'
-const CANONICAL_REL = `--C-Users-me-proj--/${SESSION_ID}/session.v4.jsonl.zstd`
+const IS_WINDOWS = process.platform === 'win32'
+// 另一平台的绝对路径：在 Linux 上是 Windows 盘符路径，在 Windows 上是 POSIX 路径。
+const FOREIGN_PREFIX = IS_WINDOWS ? '/home/me' : 'C:\\Users\\me'
+const FOREIGN_CWD = IS_WINDOWS ? '/home/me/proj' : 'C:\\Users\\me\\proj'
+const CANONICAL_REL = `${projectKey(FOREIGN_CWD)}/${SESSION_ID}/session.v4.jsonl.zstd`
 
 /** 一段合法的 V4 header 行（宿主 readHeader 只接受这些键）。 */
 function headerLine(overrides = {}) {
@@ -42,7 +48,7 @@ function headerLine(overrides = {}) {
     createdAt: 1_700_000_000_000,
     isSeeded: false,
     delegationDepth: 0,
-    cwd: WINDOWS_CWD,
+    cwd: FOREIGN_CWD,
     ...overrides,
   })}\n`
 }
@@ -81,36 +87,41 @@ async function hostBackend(sessionRoot) {
 }
 
 test('normalizeCwdMap: longest prefix first, segment boundaries, Windows is case-insensitive', () => {
+  const target = path.resolve('local-win-root')
+  const deepTarget = path.join(target, 'proj')
   const maps = normalizeCwdMap([
-    { from: 'C:\\Users\\me', to: '/home/me/win' },
-    { from: 'C:\\Users\\me\\proj', to: '/home/me/win/proj' },
+    { from: 'C:\\Users\\me', to: target },
+    { from: 'C:\\Users\\me\\proj', to: deepTarget },
   ])
   assert.equal(maps.length, 2, 'both entries survive normalization')
   assert.equal(maps[0].from, 'C:\\Users\\me\\proj', 'the deeper prefix sorts first')
 
   const deep = matchCwdMap('C:\\Users\\me\\proj\\src', maps)
   assert.equal(deep?.remainder.join('/'), 'src')
-  assert.equal(deep?.entry.to, '/home/me/win/proj')
+  assert.equal(deep?.entry.to, deepTarget)
 
   // 段边界：me2 不是 me 的前缀命中。
   assert.equal(matchCwdMap('C:\\Users\\me2\\proj', maps), undefined)
   assert.equal(matchCwdMap('C:\\Users\\me2', maps), undefined)
   // Windows 语义：大小写不敏感。
-  assert.equal(matchCwdMap('c:\\users\\ME\\proj', maps)?.entry.to, '/home/me/win/proj')
+  assert.equal(matchCwdMap('c:\\users\\ME\\proj', maps)?.entry.to, deepTarget)
   // 前缀本身（无剩余段）。
   assert.deepEqual(matchCwdMap('C:\\Users\\me', maps)?.remainder, [])
-  // 映射按段拼接，不会把 `/home/me/win` 变成 `/home/me/winproj`。
-  assert.equal(projectCwd('C:\\Users\\me\\proj', { map: maps, sessionRoot: '/root/sessions' }).cwd, '/home/me/win/proj')
-  assert.equal(projectCwd('C:\\Users\\me\\other', { map: maps, sessionRoot: '/root/sessions' }).cwd, '/home/me/win/other')
+  // 映射按段拼接，不会把 target 变成 targetproj。
+  assert.equal(projectCwd('C:\\Users\\me\\proj', { map: maps, sessionRoot: path.resolve('sessions-root') }).cwd, deepTarget)
+  assert.equal(projectCwd('C:\\Users\\me\\other', { map: maps, sessionRoot: path.resolve('sessions-root') }).cwd, path.join(target, 'other'))
 })
 
 test('normalizeCwdMap rejects malformed entries loudly', () => {
   assert.throws(() => normalizeCwdMap('nope'), /cwdMap must be an array/u)
-  assert.throws(() => normalizeCwdMap([{ from: 'C:\\me', to: '/a' }, { from: 'c:\\ME', to: '/b' }]), /duplicate from/u)
-  assert.throws(() => normalizeCwdMap([{ from: 'relative/path', to: '/a' }]), /from must be an absolute path/u)
+  assert.throws(
+    () => normalizeCwdMap([{ from: 'C:\\me', to: path.resolve('a') }, { from: 'c:\\ME', to: path.resolve('b') }]),
+    /duplicate from/u,
+  )
+  assert.throws(() => normalizeCwdMap([{ from: 'relative/path', to: path.resolve('a') }]), /from must be an absolute path/u)
   assert.throws(() => normalizeCwdMap([{ from: 'C:\\me', to: 'relative' }]), /to must be an absolute path/u)
-  assert.throws(() => normalizeCwdMap([{ from: 'C:\\me', to: '/a', extra: 1 }]), /unknown key/u)
-  assert.throws(() => normalizeCwdMap([{ from: '', to: '/a' }]), /from must be a non-empty string/u)
+  assert.throws(() => normalizeCwdMap([{ from: 'C:\\me', to: path.resolve('a'), extra: 1 }]), /unknown key/u)
+  assert.throws(() => normalizeCwdMap([{ from: '', to: path.resolve('a') }]), /from must be a non-empty string/u)
 })
 
 test('projectKey matches the host layout formula (golden values)', () => {
@@ -126,14 +137,14 @@ test('projectKey matches the host layout formula (golden values)', () => {
   assert.equal(projectedRelOf(`${SESSION_ID}/session.v4.jsonl.zstd`, '/home/me/proj'), undefined)
 })
 
-test('a Windows header becomes visible on Linux after restore (real host backend)', async (t) => {
+test('a foreign-platform header becomes visible after restore (real host backend)', async (t) => {
   const { root, clean } = await makeTemp()
   t.after(clean)
   const sessionRoot = path.join(root, 'sessions')
   const repoDir = path.join(root, 'repo')
   const mirrorRoot = path.join(repoDir, 'sessions')
-  const mappedRoot = path.join(root, 'linux')
-  const mappedCwd = path.join(mappedRoot, 'proj') // from 'C:\Users\me' + remainder 'proj'
+  const mappedRoot = path.join(root, 'local')
+  const mappedCwd = path.join(mappedRoot, 'proj') // FOREIGN_PREFIX + remainder 'proj'
   await fs.mkdir(path.join(repoDir, '.git'), { recursive: true })
   await fs.mkdir(path.join(mirrorRoot, ...CANONICAL_REL.split('/').slice(0, -1)), { recursive: true })
   const canonical = sessionLog(headerLine(), `${JSON.stringify({ type: 'user/message', seq: 0 })}\n`)
@@ -143,7 +154,7 @@ test('a Windows header becomes visible on Linux after restore (real host backend
     repoDir,
     mirrorRoot,
     sessionRoot,
-    cwdMap: normalizeCwdMap([{ from: 'C:\\Users\\me', to: mappedRoot }]),
+    cwdMap: normalizeCwdMap([{ from: FOREIGN_PREFIX, to: mappedRoot }]),
   })
   assert.equal(result.restored, 1)
   assert.equal(result.cwdMapped, 1)
@@ -193,7 +204,7 @@ test('a session with no matching mapping lands read-only in the --unmapped-- pla
   const parsed = readSessionHeader(await fs.readFile(localPath), true)
   assert.equal(parsed?.header.cwd, placeholderCwd)
   assert.equal((await fs.stat(placeholderCwd)).isDirectory(), true, 'the placeholder directory is created for workspace grouping')
-  if (process.platform !== 'win32') {
+  if (!IS_WINDOWS) {
     assert.equal((await fs.stat(localPath)).mode & 0o222, 0, 'the unmapped copy is best-effort read-only on disk')
   }
 
@@ -210,7 +221,7 @@ test('a session with no matching mapping lands read-only in the --unmapped-- pla
   await assert.rejects(fs.stat(path.join(mirrorRoot, projectKey(placeholderCwd))), { code: 'ENOENT' })
 
   // 即便有人在占位副本上追加，推送端也不接管（只读视图语义）。
-  if (process.platform !== 'win32') await fs.chmod(localPath, 0o644)
+  await fs.chmod(localPath, 0o644).catch(() => {})
   const appended = Buffer.concat([await fs.readFile(localPath), zstdFrame('{"type":"user/message","seq":1}\n')])
   await fs.writeFile(localPath, appended)
   await mirrorSessionRoot({ sessionRoot, repoDir, mirrorDir: 'sessions' })
@@ -223,8 +234,8 @@ test('appends to a mapped projection push as byte-identical appends to the origi
   const sessionRoot = path.join(root, 'sessions')
   const repoDir = path.join(root, 'repo')
   const mirrorRoot = path.join(repoDir, 'sessions')
-  const mappedRoot = path.join(root, 'linux')
-  const mappedCwd = path.join(mappedRoot, 'proj') // from 'C:\Users\me' + remainder 'proj'
+  const mappedRoot = path.join(root, 'local')
+  const mappedCwd = path.join(mappedRoot, 'proj')
   await fs.mkdir(path.join(repoDir, '.git'), { recursive: true })
   await fs.mkdir(path.join(mirrorRoot, ...CANONICAL_REL.split('/').slice(0, -1)), { recursive: true })
   const firstEvent = zstdFrame('{"type":"user/message","seq":0}\n')
@@ -235,7 +246,7 @@ test('appends to a mapped projection push as byte-identical appends to the origi
     repoDir,
     mirrorRoot,
     sessionRoot,
-    cwdMap: normalizeCwdMap([{ from: 'C:\\Users\\me', to: mappedRoot }]),
+    cwdMap: normalizeCwdMap([{ from: FOREIGN_PREFIX, to: mappedRoot }]),
   })
   const localPath = path.join(sessionRoot, ...`${projectKey(mappedCwd)}/${SESSION_ID}/session.v4.jsonl.zstd`.split('/'))
   const appendedFrame = zstdFrame('{"type":"assistant/message","seq":1}\n')
@@ -246,9 +257,9 @@ test('appends to a mapped projection push as byte-identical appends to the origi
   const pushed = await fs.readFile(path.join(mirrorRoot, ...CANONICAL_REL.split('/')))
   assert.deepEqual(pushed.subarray(0, canonical.length), canonical, 'the origin header frame is preserved byte-for-byte')
   assert.deepEqual(pushed.subarray(canonical.length), appendedFrame, 'only the appended frames are added')
-  // 宿主读回镜像里的原会话（对端视角）仍然一致：header 仍是 Windows cwd。
+  // 宿主读回镜像里的原会话（对端视角）仍然一致：header 仍是另一平台的 cwd。
   const origin = readSessionHeader(pushed, true)
-  assert.equal(origin?.header.cwd, WINDOWS_CWD)
+  assert.equal(origin?.header.cwd, FOREIGN_CWD)
 })
 
 test('projection is skipped when the directory does not encode the header id', () => {
@@ -256,8 +267,8 @@ test('projection is skipped when the directory does not encode the header id', (
   const plan = planRestoreFile({
     content,
     mirrorRel: CANONICAL_REL,
-    cwdMap: normalizeCwdMap([{ from: 'C:\\Users\\me', to: '/home/me/win' }]),
-    sessionRoot: '/root/sessions',
+    cwdMap: normalizeCwdMap([{ from: FOREIGN_PREFIX, to: path.resolve('local-target') }]),
+    sessionRoot: path.resolve('sessions-root'),
   })
   assert.equal(plan.kind, 'skipped')
   assert.equal(plan.rel, CANONICAL_REL)
@@ -265,7 +276,7 @@ test('projection is skipped when the directory does not encode the header id', (
 })
 
 test('followSessionSymlinks: inside-root links are opt-in, outside links never follow', async (t) => {
-  if (process.platform === 'win32') return t.skip('symlink creation needs extra privileges on Windows')
+  if (IS_WINDOWS) return t.skip('symlink creation needs extra privileges on Windows')
   const { root, clean } = await makeTemp()
   t.after(clean)
   const sessionRoot = path.join(root, 'sessions')
@@ -327,22 +338,13 @@ test('sync_status exposes skipped symlinks and cwd projection diagnostics', asyn
   assert.match(text, /warning: 3 file\(s\) under sessionRoot/u)
 })
 
-test('resolveConfig validates cwdMap and followSessionSymlinks', () => {
-  const base = { sessionRoot: '/tmp/sessions', repoDir: '/tmp/repo' }
-  const resolved = resolveConfig({ ...base, cwdMap: [{ from: 'C:\\Users\\me', to: '/home/me' }] })
-  assert.equal(resolved.cwdMap.length, 1)
-  assert.equal(resolved.followSessionSymlinks, false)
-  assert.throws(() => resolveConfig({ ...base, cwdMap: [{ from: 'C:\\me', to: 'relative' }] }), /to must be an absolute path/u)
-  assert.throws(() => resolveConfig(/** @type {any} */ ({ ...base, followSessionSymlinks: 'yes' })), /followSessionSymlinks must be a boolean/u)
-})
-
 test('prune maps a projected path back to the mirror and prunes remote deletions', async (t) => {
   const { root, clean } = await makeTemp()
   t.after(clean)
   const sessionRoot = path.join(root, 'sessions')
   const repoDir = path.join(root, 'repo')
   const mirrorRoot = path.join(repoDir, 'sessions')
-  const mappedRoot = path.join(root, 'linux')
+  const mappedRoot = path.join(root, 'local')
   await fs.mkdir(path.join(repoDir, '.git'), { recursive: true })
   await fs.mkdir(path.join(mirrorRoot, ...CANONICAL_REL.split('/').slice(0, -1)), { recursive: true })
   await fs.writeFile(path.join(mirrorRoot, ...CANONICAL_REL.split('/')), sessionLog(headerLine()))
@@ -350,7 +352,7 @@ test('prune maps a projected path back to the mirror and prunes remote deletions
     repoDir,
     mirrorRoot,
     sessionRoot,
-    cwdMap: normalizeCwdMap([{ from: 'C:\\Users\\me', to: mappedRoot }]),
+    cwdMap: normalizeCwdMap([{ from: FOREIGN_PREFIX, to: mappedRoot }]),
   })
   const projectedRel = `${projectKey(path.join(mappedRoot, 'proj'))}/${SESSION_ID}/session.v4.jsonl.zstd`
   const localPath = path.join(sessionRoot, ...projectedRel.split('/'))
@@ -361,4 +363,13 @@ test('prune maps a projected path back to the mirror and prunes remote deletions
   const pruned = await pruneRestoredSessions({ repoDir, mirrorRoot, sessionRoot })
   assert.deepEqual(pruned.pruned, [projectedRel])
   await assert.rejects(fs.stat(localPath), { code: 'ENOENT' })
+})
+
+test('resolveConfig validates cwdMap and followSessionSymlinks', () => {
+  const base = { sessionRoot: path.resolve('sessions'), repoDir: path.resolve('repo') }
+  const resolved = resolveConfig({ ...base, cwdMap: [{ from: 'C:\\Users\\me', to: path.resolve('home-me') }] })
+  assert.equal(resolved.cwdMap.length, 1)
+  assert.equal(resolved.followSessionSymlinks, false)
+  assert.throws(() => resolveConfig({ ...base, cwdMap: [{ from: 'C:\\me', to: 'relative' }] }), /to must be an absolute path/u)
+  assert.throws(() => resolveConfig(/** @type {any} */ ({ ...base, followSessionSymlinks: 'yes' })), /followSessionSymlinks must be a boolean/u)
 })
