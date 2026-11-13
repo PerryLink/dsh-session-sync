@@ -154,6 +154,28 @@ test('beginMerge reports the three merge states', async () => {
   assert.deepEqual(await conflicted.git.beginMerge('abc'), { conflicted: true, inProgress: true })
 })
 
+test('beginMerge refuses to treat a merge that never started as up to date', async () => {
+  // 真实场景：宿主的 .l2s.* 暂存文件让工作树 stat-dirty，git 走 autostash，
+  // `git stash create` 输出为空 → `fatal: stash failed`，且没有 MERGE_HEAD。
+  // 旧代码把这种退出当作 “already up to date”，pull 于是静默成功（#29）。
+  const { git } = makeGit([
+    { code: 128, stderr: 'fatal: stash failed' },
+    { assert: ['rev-parse', '--verify', 'MERGE_HEAD'], code: 1 },
+  ])
+  await assert.rejects(git.beginMerge('abc'), /stash failed/)
+})
+
+test('refreshIndex only refreshes stat info', async () => {
+  const { git, calls } = makeGit([{ assert: ['update-index', '-q', '--refresh'], code: 0 }])
+  await git.refreshIndex()
+  assert.deepEqual(calls[0].args, ['update-index', '-q', '--refresh'])
+})
+
+test('the whitelist rejects any update-index that would change the index', () => {
+  assert.throws(() => assertSafe(['update-index', '--add', 'x']), /only allowed as/)
+  assert.throws(() => assertSafe(['update-index', '--force-remove', 'x']), /only allowed as/)
+})
+
 test('conflictedPaths parses index stages per path', async () => {
   const { git } = makeGit([
     {
