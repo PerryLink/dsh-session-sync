@@ -1,5 +1,18 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- **`cwdMap`: restore-time cwd projection so cross-OS sessions appear in the host workspace list (#28).** A session synced from another platform carries a `header.cwd` that is not natively absolute on the receiving host, so `@deepseek-ai/dsh-workspace` never indexes it (`realpathNormalize` refuses it) and `session-persistence-jsonl` cannot even parse the header — the bytes arrived but the session stayed invisible. `cwdMap: [{ from, to }]` maps an origin prefix to a local path; the longest matching prefix wins and prefixes end on a path-segment boundary (Windows prefixes compare case-insensitively, so `C:\Users\me2` does not match `C:\Users\me`). Restore rewrites the first frame of the **local copy** only and lands it at `<projectKey(mapped cwd)>/<sessionId>/<file>`, creating the mapped directory; the mirror keeps the origin device's bytes and a push reattaches the original header frame, so the other device still sees byte-identical appends and no meaningless conflicts. Cross-platform cwds with no entry land **read-only** under `<sessionRoot>/--unmapped--` and `sync_status` counts them (`cwdUnmapped`).
+- **`followSessionSymlinks` (default `false`) and symlink diagnostics (#30).** Android/proot `link2symlink` reports host-written session files as symbolic links whose bytes are still readable, so the strict "never follow symlinks" mirror silently dropped every native session. `sync_status` now reports `skippedSymlinks` / `skippedSymlinkPaths` / `followedSymlinks` and push results carry the same warning; opting in follows only links whose `realpath` stays inside `sessionRoot` — links that escape are always skipped and counted.
+- The auto-push listener logs its registration once at mount (`auto push listener registered …`), so a host that never delivers `session/event` is diagnosable from the outside (#30).
+
+### Changed
+
+- `sync_status` gains `skippedSymlinks`, `skippedSymlinkPaths`, `followedSymlinks`, `cwdMapped`, `cwdUnmapped`, `cwdProjectionSkipped`, `cwdPlaceholder`, and `followSessionSymlinks`; `sync_pull` gains `cwdMapped` / `cwdUnmapped`; `sync_push` gains `skippedSymlinks` / `skippedSymlinkPaths`. All new fields are optional and JSON-safe.
+- `@deepseek-ai/dsh-session-persistence-jsonl` joins the devDependencies as a test gate: the projection tests create a session log with a Windows cwd, restore it, and assert the **real host backend** `stat()`/`list()` accepts the projected layout (the host validates `<root>/<projectKey(header.cwd)>/<sessionId>/<file>`, which pins our `projectKey` implementation and directory layout).
+
 ## [0.2.33] - 2026-11-13
 
 ### Fixed

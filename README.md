@@ -154,10 +154,12 @@ sync: cancelled: approval requires an open turn; /sync commands run between turn
 | `branch` | `main` | 远端分支名 |
 | `autoPushOnTurnEnd` | `false` | 每个关闭轮次后推送 |
 | `pullIntervalMinutes` | `0` | 每 N 分钟周期拉取（`0` = 关闭，最大 `10080`） |
+| `cwdMap` | `[]` | 恢复期 cwd 投影表 `[{from, to}]`（最长前缀优先；未命中的跨平台 cwd 归一到 `<sessionRoot>/--unmapped--`，只读） |
+| `followSessionSymlinks` | `false` | 是否跟随 realpath 仍在 `sessionRoot` 内的符号链接（Android/proot 诊断） |
 | `confirmVia` | `auto` | 确认通道：`auto`（优先 userQuestions，其次 approval）、`userQuestions`、`approval` |
 
 <details>
-<summary>完整配置表（21 个键）</summary>
+<summary>完整配置表（23 个键）</summary>
 
 | 键 | 默认值 | 含义 |
 |---|---|---|
@@ -174,6 +176,8 @@ sync: cancelled: approval requires an open turn; /sync commands run between turn
 | `autoPullOnStart` | `false` | 插件挂载时拉取一次（配置即授权，不再确认） |
 | `autoPushOnTurnEnd` | `false` | 每个关闭轮次后推送 |
 | `pullIntervalMinutes` | `0` | 每 N 分钟周期拉取（`0` = 关闭，最大 `10080`） |
+| `cwdMap` | `[]` | 恢复期 cwd 投影表 `[{from, to}]`（最长前缀优先；未命中的跨平台 cwd 归一到 `<sessionRoot>/--unmapped--`，只读） |
+| `followSessionSymlinks` | `false` | 是否跟随 realpath 仍在 `sessionRoot` 内的符号链接（Android/proot 诊断） |
 | `confirmVia` | `auto` | 确认通道：`auto`（优先 userQuestions，其次 approval）、`userQuestions`、`approval` |
 | `graceMs` | `10000` | git 终止宽限（毫秒） |
 | `commandTimeoutMs` | `120000` | 单条命令超时（毫秒） |
@@ -267,6 +271,27 @@ sync: cancelled: approval requires an open turn; /sync commands run between turn
 - **优雅降级意味着明文。** 使用 `backend: encrypted` 时，若 `age` 缺失，或 `ageRecipient`/`ageIdentity` 为空，插件会回退到明文 git 路径**并在状态/日志中显式告警**——它绝不假装已经加密。在把远端当作已加密之前，先检查 `/sync status` 中的告警。
 
 基线：`backend: git`（默认）下，会话字节以未加密形式存放在**你的** git 远端——请使用私有仓库。
+
+### 跨平台会话与 cwd 投影
+
+Windows ↔ Linux 会话的 `header.cwd` 在另一台机器上不是本机绝对路径：宿主 `dsh-workspace` 按 `realpath(header.cwd)` 建索引，`session-persistence-jsonl` 更是 header 解析失败就完全看不到会话。用 `cwdMap` 把源设备前缀映射到本机路径：
+
+```yaml
+cwdMap:
+  - from: 'C:\Users\me'
+    to: /home/me/win
+```
+
+- 最长前缀优先，前缀必须结束在路径段边界上（`C:\Users\me2` 不匹配 `C:\Users\me`）。
+- 恢复时只投影**本地副本**：首帧 cwd 改写为本机路径、文件落到宿主布局的项目目录，因此会话出现在 workspace 列表里。同步仓库里的字节始终是源设备的 cwd；推送时把原首帧接回，对端看到的仍是逐字节 append，不会产生无意义分叉。
+- 没有命中的跨平台 cwd 归一到 `<sessionRoot>/--unmapped--`：会话**可见但只读**，`sync_status` 的 `cwdUnmapped` 会计数，本地改动不会推送。给它补一条 `cwdMap` 后重新 pull 即可变成可继续的本地会话。
+
+### 符号链接（Android/proot）
+
+默认**绝不跟随符号链接**（安全边界）。Android/proot 的 `link2symlink` 会把宿主写入的会话文件报成符号链接（`readdir` 说是链接、`readlink` 为空、内容可读），导致手机自己的会话永远不进镜像。诊断与可选跟随：
+
+- `sync_status` 新增 `skippedSymlinks` / `skippedSymlinkPaths`（数量与路径样本）、`followedSymlinks`，push 结果也会带同类 warning；
+- `followSessionSymlinks: true`（默认 `false`）只跟随 `realpath` 仍落在 `sessionRoot` 内的链接，越界链接一律跳过并计数。
 
 ## 已知限制
 

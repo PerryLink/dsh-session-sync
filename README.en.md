@@ -154,10 +154,12 @@ Most-used keys:
 | `branch` | `main` | Remote branch name |
 | `autoPushOnTurnEnd` | `false` | Push after every closed turn |
 | `pullIntervalMinutes` | `0` | Periodic pull every N minutes (`0` = off, max `10080`) |
+| `cwdMap` | `[]` | Restore-time cwd projection `[{from, to}]` (longest prefix wins; unmatched cross-platform cwds go read-only under `<sessionRoot>/--unmapped--`) |
+| `followSessionSymlinks` | `false` | Follow symbolic links whose realpath stays inside `sessionRoot` (Android/proot diagnostics) |
 | `confirmVia` | `auto` | Confirmation channel: `auto` (userQuestions first, then approval), `userQuestions`, `approval` |
 
 <details>
-<summary>Full configuration table (21 keys)</summary>
+<summary>Full configuration table (23 keys)</summary>
 
 | Key | Default | Meaning |
 |---|---|---|
@@ -174,6 +176,8 @@ Most-used keys:
 | `autoPullOnStart` | `false` | Pull once when the plugin mounts (config is the grant; no re-confirm) |
 | `autoPushOnTurnEnd` | `false` | Push after every closed turn |
 | `pullIntervalMinutes` | `0` | Periodic pull every N minutes (`0` = off, max `10080`) |
+| `cwdMap` | `[]` | Restore-time cwd projection `[{from, to}]` (longest prefix wins; unmatched cross-platform cwds go read-only under `<sessionRoot>/--unmapped--`) |
+| `followSessionSymlinks` | `false` | Follow symbolic links whose realpath stays inside `sessionRoot` (Android/proot diagnostics) |
 | `confirmVia` | `auto` | Confirmation channel: `auto` (userQuestions first, then approval), `userQuestions`, `approval` |
 | `graceMs` | `10000` | Grace period for git kills (ms) |
 | `commandTimeoutMs` | `120000` | Per-command timeout (ms) |
@@ -267,6 +271,27 @@ What it does **not** protect (the boundary):
 - **Graceful degradation means plaintext.** With `backend: encrypted`, if `age` is missing, or `ageRecipient`/`ageIdentity` is empty, the plugin falls back to the plaintext git path **and warns explicitly** in the status/log — it never silently pretends to encrypt. Check `/sync status` for the warning before trusting the remote as encrypted.
 
 Baseline: with `backend: git` (the default), session bytes are stored unencrypted in **your** git remote — use a private repository.
+
+### Cross-OS sessions and cwd projection
+
+A Windows session synced to Linux (or the reverse) carries a `header.cwd` that is not a fully qualified path on the receiving host: `dsh-workspace` indexes sessions through `realpath(header.cwd)`, and `session-persistence-jsonl` cannot even parse a header whose cwd is not natively absolute. Map the origin prefix to a local path:
+
+```yaml
+cwdMap:
+  - from: 'C:\Users\me'
+    to: /home/me/win
+```
+
+- The longest matching prefix wins, and prefixes end on a path-segment boundary (`C:\Users\me2` does not match `C:\Users\me`).
+- Restore projects only the **local copy**: its first frame carries the local cwd and lands in the host's project directory, so the session shows up in the workspace list. The mirror keeps the origin device's bytes; a push reattaches the original header frame, so the other device still sees byte-identical appends and never gets meaningless conflicts.
+- A cross-platform cwd with no entry lands under `<sessionRoot>/--unmapped--`: **visible but read-only** (`sync_status` reports it as `cwdUnmapped`, and local edits are never pushed). Add a `cwdMap` entry and pull again to turn it into a continuable local session.
+
+### Symbolic links (Android/proot)
+
+The mirror **never follows symbolic links** by default (a safety boundary). Android/proot's `link2symlink` reports host-written session files as symlinks (`readdir` says link, `readlink` is empty, the bytes are readable), so the phone's own sessions never reach the mirror. Diagnostics and opt-in following:
+
+- `sync_status` reports `skippedSymlinks` / `skippedSymlinkPaths` (count and path samples) and `followedSymlinks`; push results carry the same warning.
+- `followSessionSymlinks: true` (default `false`) follows only links whose `realpath` stays inside `sessionRoot`; links that escape are always skipped and counted.
 
 ## Known limitations
 
