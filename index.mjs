@@ -57,6 +57,19 @@ import { collectStatus } from './lib/status.mjs'
 import { renderDiff, renderPull, renderPush, renderStatus, errorValue } from './lib/render.mjs'
 import { confirmSync, hasOpenTurn, makeEventGate, maybeAppendSessionEvent, openTurnFromProjection } from './lib/gate.mjs'
 import { sessionSyncDomainSpec } from './lib/domain.mjs'
+import {
+  matchCwdMap,
+  normalizeCwdMap,
+  projectCwd,
+  projectKey,
+  projectedRelOf,
+} from './lib/cwdmap.mjs'
+import {
+  canonicalizeProjectedFile,
+  planRestoreFile,
+  readProjectionState,
+} from './lib/projection.mjs'
+import { readSessionHeader } from './lib/sessionlog.mjs'
 
 export const name = PLUGIN_NAME
 
@@ -107,6 +120,8 @@ export function probeIgnorableAppend() {
  * @property {boolean} [autoPushOnTurnEnd] 每个 turn/end 后自动推送（配置即授权）。
  * @property {number} [pullIntervalMinutes] 周期自动拉取间隔分钟（0 = 关闭）。
  * @property {'auto'|'userQuestions'|'approval'} [confirmVia] 确认通道（auto 优先 userQuestions）。
+ * @property {ReadonlyArray<{from: string, to: string}>} [cwdMap] 恢复期 cwd 投影表（最长前缀优先；未命中的跨平台 cwd 归一到 sessionRoot/--unmapped--）。
+ * @property {boolean} [followSessionSymlinks] 镜像时是否跟随 realpath 仍在 sessionRoot 内的符号链接（默认 false）。
  * @property {number} [graceMs] git 子进程终止宽限（ms）。
  * @property {number} [commandTimeoutMs] 单条 git 命令超时（ms）。
  * @property {number} [maxOutputBytes] git 输出单流收集上限（字节）。
@@ -132,6 +147,11 @@ export const Config = Schema.object({
   autoPushOnTurnEnd: Schema.boolean().default(DEFAULTS.AUTO_PUSH_ON_TURN_END),
   pullIntervalMinutes: Schema.number().default(DEFAULTS.PULL_INTERVAL_MINUTES),
   confirmVia: Schema.union(Object.values(CONFIRM_CHANNELS)).default(DEFAULTS.CONFIRM_VIA),
+  cwdMap: Schema.array(Schema.object({
+    from: Schema.string().required(),
+    to: Schema.string().required(),
+  })).default([...DEFAULTS.CWD_MAP]),
+  followSessionSymlinks: Schema.boolean().default(DEFAULTS.FOLLOW_SESSION_SYMLINKS),
   graceMs: Schema.number().default(DEFAULTS.GRACE_MS),
   commandTimeoutMs: Schema.number().default(DEFAULTS.COMMAND_TIMEOUT_MS),
   maxOutputBytes: Schema.number().default(DEFAULTS.MAX_OUTPUT_BYTES),
@@ -162,6 +182,8 @@ export function resolveConfig(config = {}) {
     autoPushOnTurnEnd: config.autoPushOnTurnEnd ?? DEFAULTS.AUTO_PUSH_ON_TURN_END,
     pullIntervalMinutes: config.pullIntervalMinutes ?? DEFAULTS.PULL_INTERVAL_MINUTES,
     confirmVia: config.confirmVia ?? DEFAULTS.CONFIRM_VIA,
+    cwdMap: normalizeCwdMap(config.cwdMap ?? DEFAULTS.CWD_MAP),
+    followSessionSymlinks: config.followSessionSymlinks ?? DEFAULTS.FOLLOW_SESSION_SYMLINKS,
     graceMs: config.graceMs ?? DEFAULTS.GRACE_MS,
     commandTimeoutMs: config.commandTimeoutMs ?? DEFAULTS.COMMAND_TIMEOUT_MS,
     maxOutputBytes: config.maxOutputBytes ?? DEFAULTS.MAX_OUTPUT_BYTES,
@@ -203,6 +225,9 @@ export function resolveConfig(config = {}) {
   }
   if (!Number.isInteger(resolved.pullIntervalMinutes) || resolved.pullIntervalMinutes < LIMITS.MIN_PULL_INTERVAL_MINUTES || resolved.pullIntervalMinutes > LIMITS.MAX_PULL_INTERVAL_MINUTES) {
     throw badConfig(`pullIntervalMinutes must be an integer in [${LIMITS.MIN_PULL_INTERVAL_MINUTES}, ${LIMITS.MAX_PULL_INTERVAL_MINUTES}]`)
+  }
+  if (typeof resolved.followSessionSymlinks !== 'boolean') {
+    throw badConfig('followSessionSymlinks must be a boolean')
   }
   if (typeof resolved.commitName !== 'string' || resolved.commitName.trim().length === 0) {
     throw badConfig('commitName must be a non-empty string')
@@ -348,9 +373,9 @@ const TOOL_TEXT = {
 }
 
 /** sync_status 工具规范结果（与工具 schema 同构）。 */
-/** @typedef {{ok: boolean, branch: string, remote: string, head?: string, remoteHead?: string, ahead: number, behind: number, dirty: string[], forks: string[], diffStat: string, mergeInProgress: boolean, lastCommits: string[], lastPullAt?: number, lastPushAt?: number, lastError?: string, error?: string, warnings?: string[]}} StatusValue */
-/** @typedef {{ok: boolean, pulled?: boolean, merged?: boolean, adopted?: number, appended?: number, diverged?: number, forks?: string[], head?: string, error?: string, warnings?: string[]}} PullValue */
-/** @typedef {{ok: boolean, pushed?: boolean, head?: string, mirrored?: number, deleted?: number, remote?: string, error?: string, warnings?: string[]}} PushValue */
+/** @typedef {{ok: boolean, branch: string, remote: string, head?: string, remoteHead?: string, ahead: number, behind: number, dirty: string[], forks: string[], diffStat: string, mergeInProgress: boolean, lastCommits: string[], lastPullAt?: number, lastPushAt?: number, lastError?: string, error?: string, skippedSymlinks?: number, skippedSymlinkPaths?: string[], followedSymlinks?: number, cwdMapped?: number, cwdUnmapped?: number, cwdProjectionSkipped?: number, cwdPlaceholder?: string, followSessionSymlinks?: boolean, warnings?: string[]}} StatusValue */
+/** @typedef {{ok: boolean, pulled?: boolean, merged?: boolean, adopted?: number, appended?: number, diverged?: number, forks?: string[], head?: string, restored?: number, cwdMapped?: number, cwdUnmapped?: number, error?: string, warnings?: string[]}} PullValue */
+/** @typedef {{ok: boolean, pushed?: boolean, head?: string, mirrored?: number, deleted?: number, remote?: string, skippedSymlinks?: number, skippedSymlinkPaths?: string[], error?: string, warnings?: string[]}} PushValue */
 
 /**
  * sync_status 工具定义（read-only：不确认、不触网）。
@@ -384,6 +409,14 @@ export function makeSyncStatusTool(engine, readMeta) {
           lastPushAt: { type: 'integer' },
           lastError: { type: 'string' },
           error: { type: 'string' },
+          skippedSymlinks: { type: 'integer' },
+          skippedSymlinkPaths: { type: 'array', items: { type: 'string' } },
+          followedSymlinks: { type: 'integer' },
+          cwdMapped: { type: 'integer' },
+          cwdUnmapped: { type: 'integer' },
+          cwdProjectionSkipped: { type: 'integer' },
+          cwdPlaceholder: { type: 'string' },
+          followSessionSymlinks: { type: 'boolean' },
           warnings: { type: 'array', items: { type: 'string' } },
         },
       },
@@ -437,6 +470,9 @@ export function makeSyncPullTool(deps) {
           diverged: { type: 'integer' },
           forks: { type: 'array', items: { type: 'string' } },
           head: { type: 'string' },
+          restored: { type: 'integer' },
+          cwdMapped: { type: 'integer' },
+          cwdUnmapped: { type: 'integer' },
           error: { type: 'string' },
           warnings: { type: 'array', items: { type: 'string' } },
         },
@@ -496,6 +532,8 @@ export function makeSyncPushTool(deps) {
           mirrored: { type: 'integer' },
           deleted: { type: 'integer' },
           remote: { type: 'string' },
+          skippedSymlinks: { type: 'integer' },
+          skippedSymlinkPaths: { type: 'array', items: { type: 'string' } },
           error: { type: 'string' },
           warnings: { type: 'array', items: { type: 'string' } },
         },
@@ -670,6 +708,8 @@ export function apply(ctx, config = {}) {
     remote: resolved.remote,
     branch: resolved.branch,
     deviceId: 'pending',
+    cwdMap: resolved.cwdMap,
+    followSessionSymlinks: resolved.followSessionSymlinks,
     reportMeta,
     reportError,
     logger,
@@ -865,6 +905,9 @@ export function apply(ctx, config = {}) {
 
   // turn/end 自动推送（配置即授权；每轮结束拉一次快照并推送）。
   if (resolved.autoPushOnTurnEnd) {
+    // #30：有些宿主（Android/proot 的 DSH Go）不发 session/event；把"监听器已
+    // 注册"记进日志，让外部可判断的是宿主事件还是插件注册。
+    logger.info(`auto push listener registered (session/event turn/end → push); pullIntervalMinutes=${resolved.pullIntervalMinutes}`)
     ctx.on('session/event', (session, event) => {
       if (event.type !== 'turn/end') return
       void engine.push().then(result => {
@@ -923,4 +966,14 @@ export {
   sessionSyncDomainSpec,
   registryUnavailable,
   errorValue,
+  // 跨平台 cwd 投影（#28）与符号链接诊断（#30）的复用/测试面。
+  normalizeCwdMap,
+  matchCwdMap,
+  projectCwd,
+  projectKey,
+  projectedRelOf,
+  planRestoreFile,
+  canonicalizeProjectedFile,
+  readProjectionState,
+  readSessionHeader,
 }

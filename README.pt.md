@@ -154,10 +154,12 @@ Chaves mais usadas:
 | `branch` | `main` | Nome do branch remoto |
 | `autoPushOnTurnEnd` | `false` | Push após cada turno fechado |
 | `pullIntervalMinutes` | `0` | Pull periódico a cada N minutos (`0` = desligado, máximo `10080`) |
+| `cwdMap` | `[]` | Projeção de cwd na restauração `[{from, to}]` (o prefixo mais longo vence; cwds multiplataforma sem entrada ficam somente leitura em `<sessionRoot>/--unmapped--`) |
+| `followSessionSymlinks` | `false` | Segue links simbólicos cujo realpath permanece dentro de `sessionRoot` (diagnóstico Android/proot) |
 | `confirmVia` | `auto` | Canal de confirmação: `auto` (userQuestions primeiro, depois approval), `userQuestions`, `approval` |
 
 <details>
-<summary>Tabela de configuração completa (21 chaves)</summary>
+<summary>Tabela de configuração completa (23 chaves)</summary>
 
 | Chave | Padrão | Significado |
 |---|---|---|
@@ -174,6 +176,8 @@ Chaves mais usadas:
 | `autoPullOnStart` | `false` | Pull uma vez ao montar o plugin (a configuração é a autorização; sem reconfirmação) |
 | `autoPushOnTurnEnd` | `false` | Push após cada turno fechado |
 | `pullIntervalMinutes` | `0` | Pull periódico a cada N minutos (`0` = desligado, máximo `10080`) |
+| `cwdMap` | `[]` | Projeção de cwd na restauração `[{from, to}]` (o prefixo mais longo vence; cwds multiplataforma sem entrada ficam somente leitura em `<sessionRoot>/--unmapped--`) |
+| `followSessionSymlinks` | `false` | Segue links simbólicos cujo realpath permanece dentro de `sessionRoot` (diagnóstico Android/proot) |
 | `confirmVia` | `auto` | Canal de confirmação: `auto` (userQuestions primeiro, depois approval), `userQuestions`, `approval` |
 | `graceMs` | `10000` | Período de carência para matar o git (ms) |
 | `commandTimeoutMs` | `120000` | Timeout por comando (ms) |
@@ -267,6 +271,27 @@ O que ela **não** protege (a fronteira):
 - **Degradação graciosa significa texto plano.** Com `backend: encrypted`, se o `age` faltar, ou `ageRecipient`/`ageIdentity` estiverem vazios, o plugin cai para o caminho git em texto plano **e avisa explicitamente** no status/log — nunca finge criptografar. Verifique o aviso em `/sync status` antes de confiar no remoto como criptografado.
 
 Linha de base: com `backend: git` (o padrão), os bytes de sessão são armazenados sem criptografia no **seu** remoto git — use um repositório privado.
+
+### Sessões multiplataforma e projeção de cwd
+
+Uma sessão do Windows sincronizada no Linux (ou o contrário) carrega um `header.cwd` que não é um caminho absoluto nativo no host receptor: o `dsh-workspace` indexa sessões via `realpath(header.cwd)`, e o `session-persistence-jsonl` nem consegue analisar um header cujo cwd não seja absoluto nativo. Mapeie o prefixo de origem para um caminho local:
+
+```yaml
+cwdMap:
+  - from: 'C:\Users\me'
+    to: /home/me/win
+```
+
+- O prefixo mais longo vence, e os prefixos terminam num limite de segmento (`C:\Users\me2` não corresponde a `C:\Users\me`).
+- A restauração projeta apenas a **cópia local**: o primeiro frame leva o cwd local e cai no diretório de projeto do host, então a sessão aparece na lista de workspaces. O espelho mantém os bytes do dispositivo de origem; um push reanexa o frame de cabeçalho original, então o outro dispositivo continua vendo appends idênticos byte a byte e nunca recebe conflitos sem sentido.
+- Um cwd multiplataforma sem entrada vai para `<sessionRoot>/--unmapped--`: **visível mas somente leitura** (`sync_status` o informa como `cwdUnmapped`, e edições locais nunca são enviadas). Adicione uma entrada `cwdMap` e faça pull de novo para torná-lo uma sessão local continuável.
+
+### Links simbólicos (Android/proot)
+
+O espelho **nunca segue links simbólicos** por padrão (limite de segurança). O `link2symlink` do Android/proot informa os arquivos de sessão escritos pelo host como links simbólicos (`readdir` diz link, `readlink` está vazio, os bytes são legíveis), então as sessões do próprio telefone nunca chegam ao espelho. Diagnóstico e seguimento opcional:
+
+- `sync_status` informa `skippedSymlinks` / `skippedSymlinkPaths` (contagem e amostras de caminhos) e `followedSymlinks`; o resultado do push leva o mesmo aviso.
+- `followSessionSymlinks: true` (padrão `false`) segue apenas links cujo `realpath` permanece dentro de `sessionRoot`; links que escapam são sempre ignorados e contados.
 
 ## Limitações conhecidas
 

@@ -40,6 +40,17 @@
         # auto (userQuestions first, then approval) · userQuestions · approval.
         # Read-only surfaces (status/diff/log) never ask.
         confirmVia: auto
+        # Restore-time cwd projection (cross-OS sessions). Each entry maps an
+        # origin-device prefix to a local path; longest matching prefix wins and
+        # prefixes end on a path-segment boundary (C:\Users\me2 does not match
+        # C:\Users\me). The mirror keeps the origin device's bytes; only the
+        # restored local copy carries the local cwd. Cross-platform cwds with no
+        # entry are shown read-only under <sessionRoot>/--unmapped--.
+        cwdMap: []
+        # Mirror symbolic links whose realpath stays inside sessionRoot
+        # (Android/proot link2symlink hosts). Default false keeps "never follow
+        # symlinks"; skipped links are counted and listed in sync_status.
+        followSessionSymlinks: false
         # Subprocess tuning: grace period for git kills, per-command timeout,
         # and the per-stream collected-output cap.
         graceMs: 10000

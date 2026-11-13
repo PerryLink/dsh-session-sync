@@ -29,3 +29,7 @@ minimumReleaseAgeExclude:
 # exclusion list above stays as the documented intent.
 minimumReleaseAge: 0
 verifyDepsBeforeRun: false
+# koffi is an optional native FFI edge pulled in by the JSONL persistence
+# devDependency used as a restore-projection test gate; the tests never load it.
+allowBuilds:
+  koffi: false

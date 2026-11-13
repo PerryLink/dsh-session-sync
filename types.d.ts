@@ -98,6 +98,19 @@ export interface Config {
   pullIntervalMinutes?: number
   /** 确认通道：auto（userQuestions 优先，其次 approval）· userQuestions · approval。 */
   confirmVia?: 'auto' | 'userQuestions' | 'approval'
+  /**
+   * 恢复期 cwd 投影表（issue #28）：`[{ from, to }]`，最长前缀优先，前缀按
+   * 路径段边界匹配。命中时恢复出的会话以 `to` 下的本机路径可见；未命中的
+   * 跨平台 cwd 归一到 `<sessionRoot>/--unmapped--` 并以只读视图呈现。
+   * 同步仓库里的字节始终保留原设备的 cwd。
+   */
+  cwdMap?: ReadonlyArray<{ from: string, to: string }>
+  /**
+   * 镜像时是否跟随符号链接（issue #30；默认 false）。只有 realpath 仍落在
+   * sessionRoot 内的链接才会被读取/递归；越界链接一律跳过并在 sync_status 里
+   * 报告。默认值保持严格的"绝不跟随"。
+   */
+  followSessionSymlinks?: boolean
   /** git 子进程终止宽限（ms；默认 10000）。 */
   graceMs?: number
   /** 单条 git 命令超时（ms；默认 120000）。 */
@@ -132,6 +145,22 @@ export interface StatusValue {
   lastPushAt?: number
   lastError?: string
   error?: string
+  /** 本次镜像跳过的符号链接数（未镜像；default 严格模式）。 */
+  skippedSymlinks?: number
+  /** 跳过的符号链接路径样本（最多 20 条）。 */
+  skippedSymlinkPaths?: string[]
+  /** 本次镜像跟随的根内符号链接数（followSessionSymlinks: true 时）。 */
+  followedSymlinks?: number
+  /** 恢复期投影到本机 cwd 的会话数。 */
+  cwdMapped?: number
+  /** 无 cwdMap 命中的跨平台会话数（占位只读视图）。 */
+  cwdUnmapped?: number
+  /** 无法投影的会话文件数（header 不可解析/旧布局）。 */
+  cwdProjectionSkipped?: number
+  /** 占位只读视图的目录（`<sessionRoot>/--unmapped--`）。 */
+  cwdPlaceholder?: string
+  /** 是否开启符号链接跟随（诊断用）。 */
+  followSessionSymlinks?: boolean
   warnings?: string[]
 }
 
@@ -145,6 +174,9 @@ export interface PullValue {
   diverged?: number
   forks?: string[]
   head?: string
+  restored?: number
+  cwdMapped?: number
+  cwdUnmapped?: number
   error?: string
   warnings?: string[]
 }
@@ -157,6 +189,8 @@ export interface PushValue {
   mirrored?: number
   deleted?: number
   remote?: string
+  skippedSymlinks?: number
+  skippedSymlinkPaths?: string[]
   error?: string
   warnings?: string[]
 }

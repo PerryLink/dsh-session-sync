@@ -19,7 +19,10 @@
 | `lib/paths.mjs` | Path resolution, nesting checks, and fork-file naming — pure |
 | `lib/sanitize.mjs` | Pure display/log redaction (remote-URL credentials, tokens, `key=value` secrets, path-containment display) |
 | `lib/merge.mjs` | Append-only three-way merge classification — pure |
-| `lib/mirror.mjs` | Byte mirror from the session store into the worktree (`node:fs`) |
+| `lib/mirror.mjs` | Byte mirror from the session store into the worktree, restore back into the live store, and deletion protection (`node:fs`). Projection-aware: projected local copies are skipped as sources and reattached to the mirror's original header frame; `followSessionSymlinks` opts into contained links only |
+| `lib/cwdmap.mjs` | Restore-time cwd matching/projection — pure (`cwdMap` longest-prefix + segment boundary, host-compatible `projectKey`, `--unmapped--` fallback) |
+| `lib/sessionlog.mjs` | Session-log first frame read/rewrite (`node:zlib`): the header is its own zstd frame, so a projection replaces only that frame |
+| `lib/projection.mjs` | Local projection state (`.git/dsh-session-sync-projection.json`): canonical↔projected path pairs, original cwd and header frame; plans restore placement and reconstructs canonical bytes on push |
 | `lib/git.mjs` | Git command layer: verb whitelist + argument assertions, never force-push/reset/rebase/branch-switch |
 | `lib/backend.mjs` | Transport backend seam contract + pure `selectEncryptionMode` (backend/mode/warnings selection) |
 | `lib/age.mjs` | age binary probe (`detectAge`) + file-based `ageEncrypt`/`ageDecrypt` (optional external binary, graceful degrade) |
@@ -36,9 +39,10 @@
 $DSH_HOME/sessions ──byte mirror──▶ <repoDir>/sessions ──git──▶ custom remote
 ```
 
-1. **Mirror** copies each session file as opaque bytes into the worktree (symlinks refused, deletions only for files that vanished at the source and are neither fork files nor host-private artifacts). Host-private artifacts (`session.lock`, the harness session lease, and `session.migration.*.tmp` staging files) are runtime state, not syncable content: the mirror neither copies them in nor deletes them from the worktree.
+1. **Mirror** copies each session file as opaque bytes into the worktree (symlinks refused by default, deletions only for files that vanished at the source and are neither fork files nor host-private artifacts). Host-private artifacts (`session.lock`, the harness session lease, and `session.migration.*.tmp` staging files) are runtime state, not syncable content: the mirror neither copies them in nor deletes them from the worktree. With `followSessionSymlinks: true` only links whose `realpath` stays inside `sessionRoot` are read (still never written through), and every skipped link is reported.
 2. **Commit** records the mirror as a git commit (plugin identity, never the user's git identity).
 3. **Push/pull** move commits to/from the configured remote over `ctx.subprocess`-driven git.
+4. **Restore projection (`cwdMap`)** — a cross-OS session's `header.cwd` is not natively absolute on the receiving host, so neither the workspace index nor the JSONL backend can read it. On restore, `lib/cwdmap.mjs` maps the origin prefix to a local path (longest prefix, segment boundary), `lib/projection.mjs` rewrites the **first frame of the local copy only**, and the file lands at `<projectKey(mapped cwd)>/<sessionId>/<file>` — the same formula the host validates. The mirror keeps the origin device's bytes; on push the original header frame is reattached, so the remote sees only the locally appended frames (byte-identical append-only merge, no fork churn). Without a mapping entry a cross-platform cwd goes read-only to `<sessionRoot>/--unmapped--` (visible, `cwdUnmapped` in status, never a push source) and its mapped directory is created so the host can group it.
 
 ## Conflict resolution — never silently overwrite
 
@@ -80,11 +84,14 @@ Auto runs are covered by the config grant and never re-confirm.
 
 - **Verb whitelist** in `lib/git.mjs`; `-f`/`--force`/`--force-with-lease`/`+refspec`, `reset`, `clean`, `rebase`, and branch-switch `checkout` are refused.
 - **Path containment** before any join (`PATH_UNSAFE` fails loud).
-- **Symlinks never followed** on either side of the mirror.
+- **Symlinks never followed by default** on either side of the mirror. `followSessionSymlinks: true` (opt-in) reads only links whose `realpath` stays inside `sessionRoot`; writes still refuse link targets and escape paths.
+- **Restore projection never rewrites the synced bytes.** Only the local copy's first frame changes; the mirror always receives the origin header frame plus the locally appended frames, so cross-platform mapping cannot create meaningless divergence.
 - **Sanitize before display/log** — remote-URL credentials, tokens, and `key=value` secrets are redacted before reaching the model or the log.
 - **Bounded subprocesses** — git runs with `GIT_TERMINAL_PROMPT=0` and `GIT_OPTIONAL_LOCKS=0`, deadline- and signal-bounded, with a per-stream output cap.
 
 ## Upstream asks (recorded, not implemented)
+
+- **Host-side cwd alias for session indexing.** `dsh-workspace` indexes sessions by `realpath(header.cwd)` and `session-persistence-jsonl` rejects a header whose cwd is not natively absolute, so cross-OS visibility currently requires the plugin to rewrite a local copy of the header and move the file into the projected project directory. A host-level alias/foreign-root mapping (or a `SessionHeader` cwd override at read time) would let the mirror stay byte-identical everywhere and drop the projection state.
 
 - **Session-directory layout version marker.** The mirror maps fork files back to sessions by path shape (`<projectKey>/<sessionId>/<file>` plus the legacy flat form). A version marker in the session-directory layout would let a future plugin declare which layout it understands instead of sniffing segment shapes; recorded here per the 0.1.6 adaptation review (P2, no code change requested).
 

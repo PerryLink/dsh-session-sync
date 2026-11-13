@@ -154,10 +154,12 @@ sync: cancelled: approval requires an open turn; /sync commands run between turn
 | `branch` | `main` | रिमोट branch का नाम |
 | `autoPushOnTurnEnd` | `false` | हर बंद टर्न के बाद push |
 | `pullIntervalMinutes` | `0` | हर N मिनट में आवधिक pull (`0` = बंद, अधिकतम `10080`) |
+| `cwdMap` | `[]` | पुनर्स्थापन के समय cwd प्रोजेक्शन `[{from, to}]` (सबसे लंबा प्रीफ़िक्स जीतता है; बिना मेल वाले क्रॉस-प्लेटफ़ॉर्म cwd `<sessionRoot>/--unmapped--` के नीचे केवल-पढ़ने योग्य रहते हैं) |
+| `followSessionSymlinks` | `false` | उन सिम्बोलिक लिंक का पालन करें जिनका realpath `sessionRoot` के भीतर ही रहता है (Android/proot निदान) |
 | `confirmVia` | `auto` | पुष्टि चैनल: `auto` (पहले userQuestions, फिर approval), `userQuestions`, `approval` |
 
 <details>
-<summary>पूरी कॉन्फ़िगरेशन तालिका (21 कुंजियाँ)</summary>
+<summary>पूरी कॉन्फ़िगरेशन तालिका (23 कुंजियाँ)</summary>
 
 | कुंजी | डिफ़ॉल्ट | अर्थ |
 |---|---|---|
@@ -174,6 +176,8 @@ sync: cancelled: approval requires an open turn; /sync commands run between turn
 | `autoPullOnStart` | `false` | प्लगइन माउंट होने पर एक बार pull (कॉन्फ़िग ही अनुमति है; दोबारा पुष्टि नहीं) |
 | `autoPushOnTurnEnd` | `false` | हर बंद टर्न के बाद push |
 | `pullIntervalMinutes` | `0` | हर N मिनट में आवधिक pull (`0` = बंद, अधिकतम `10080`) |
+| `cwdMap` | `[]` | पुनर्स्थापन के समय cwd प्रोजेक्शन `[{from, to}]` (सबसे लंबा प्रीफ़िक्स जीतता है; बिना मेल वाले क्रॉस-प्लेटफ़ॉर्म cwd `<sessionRoot>/--unmapped--` के नीचे केवल-पढ़ने योग्य रहते हैं) |
+| `followSessionSymlinks` | `false` | उन सिम्बोलिक लिंक का पालन करें जिनका realpath `sessionRoot` के भीतर ही रहता है (Android/proot निदान) |
 | `confirmVia` | `auto` | पुष्टि चैनल: `auto` (पहले userQuestions, फिर approval), `userQuestions`, `approval` |
 | `graceMs` | `10000` | git को समाप्त करने की छूट अवधि (ms) |
 | `commandTimeoutMs` | `120000` | प्रति-कमांड timeout (ms) |
@@ -267,6 +271,27 @@ sync: cancelled: approval requires an open turn; /sync commands run between turn
 - **सौम्य अवनति का अर्थ plaintext है।** `backend: encrypted` के साथ, यदि `age` नहीं है, या `ageRecipient`/`ageIdentity` खाली हैं, तो प्लगइन plaintext git पथ पर लौटता है **और स्थिति/लॉग में स्पष्ट चेतावनी देता है** — कभी चुपचाप एन्क्रिप्टेड होने का दिखावा नहीं करता। रिमोट को एन्क्रिप्टेड मानने से पहले `/sync status` में चेतावनी देखें।
 
 आधार रेखा: `backend: git` (डिफ़ॉल्ट) के साथ सत्र बाइट्स **आपके** git रिमोट में बिना एन्क्रिप्शन के संग्रहीत होते हैं — निजी रिपॉज़िटरी का उपयोग करें।
+
+### क्रॉस-प्लेटफ़ॉर्म सत्र और cwd प्रोजेक्शन
+
+Windows से Linux (या उलटा) सिंक किए गए सत्र का `header.cwd` प्राप्तकर्ता होस्ट पर मूल निरपेक्ष पथ नहीं होता: `dsh-workspace` सत्रों को `realpath(header.cwd)` से अनुक्रमित करता है, और `session-persistence-jsonl` ऐसे header को पढ़ ही नहीं सकता जिसका cwd मूल रूप से निरपेक्ष न हो। स्रोत प्रीफ़िक्स को स्थानीय पथ पर मैप करें:
+
+```yaml
+cwdMap:
+  - from: 'C:\Users\me'
+    to: /home/me/win
+```
+
+- सबसे लंबा मिलता प्रीफ़िक्स जीतता है, और प्रीफ़िक्स पथ-खंड सीमा पर समाप्त होना चाहिए (`C:\Users\me2` `C:\Users\me` से मेल नहीं खाता)।
+- पुनर्स्थापन केवल **स्थानीय प्रति** को प्रोजेक्ट करता है: उसका पहला फ़्रेम स्थानीय cwd लेकर होस्ट के प्रोजेक्ट निर्देशिका में जाता है, इसलिए सत्र workspace सूची में दिखता है। मिरर स्रोत डिवाइस के बाइट्स रखता है; push मूल हेडर फ़्रेम को फिर जोड़ देता है, इसलिए दूसरा डिवाइस अभी भी बाइट-दर-बाइट समान appends देखता है और व्यर्थ conflicts नहीं पाता।
+- बिना मेल वाला क्रॉस-प्लेटफ़ॉर्म cwd `<sessionRoot>/--unmapped--` में जाता है: **दिखता है पर केवल-पढ़ने योग्य** (`sync_status` इसे `cwdUnmapped` बताता है, और स्थानीय बदलाव कभी push नहीं होते)। `cwdMap` प्रविष्टि जोड़कर फिर pull करें तो यह जारी रखने योग्य स्थानीय सत्र बन जाता है।
+
+### सिम्बोलिक लिंक (Android/proot)
+
+मिरर डिफ़ॉल्ट रूप से **सिम्बोलिक लिंक का पालन कभी नहीं करता** (सुरक्षा सीमा)। Android/proot का `link2symlink` होस्ट द्वारा लिखी सत्र फ़ाइलों को सिम्बोलिक लिंक बताता है (`readdir` लिंक कहता है, `readlink` खाली है, बाइट्स पढ़े जा सकते हैं), इसलिए फ़ोन के अपने सत्र मिरर तक कभी नहीं पहुँचते। निदान और वैकल्पिक पालन:
+
+- `sync_status` अब `skippedSymlinks` / `skippedSymlinkPaths` (गिनती और पथ नमूने) तथा `followedSymlinks` बताता है; push परिणाम में वही चेतावनी आती है।
+- `followSessionSymlinks: true` (डिफ़ॉल्ट `false`) केवल उन लिंक का पालन करता है जिनका `realpath` `sessionRoot` के भीतर रहता है; बाहर जाने वाले लिंक हमेशा छोड़े और गिने जाते हैं।
 
 ## ज्ञात सीमाएँ
 
