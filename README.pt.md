@@ -159,7 +159,7 @@ Chaves mais usadas:
 | `confirmVia` | `auto` | Canal de confirmação: `auto` (userQuestions primeiro, depois approval), `userQuestions`, `approval` |
 
 <details>
-<summary>Tabela de configuração completa (23 chaves)</summary>
+<summary>Tabela de configuração completa (24 chaves)</summary>
 
 | Chave | Padrão | Significado |
 |---|---|---|
@@ -175,6 +175,7 @@ Chaves mais usadas:
 | `ageIdentity` | `''` | Caminho de uma chave secreta age sem frase de senha para descriptografar; vazio = não consegue descriptografar, degrada para texto plano |
 | `autoPullOnStart` | `false` | Pull uma vez ao montar o plugin (a configuração é a autorização; sem reconfirmação) |
 | `autoPushOnTurnEnd` | `false` | Push após cada turno fechado |
+| `durabilityTimeoutMs` | `2000` | Limite de espera pela barreira de durabilidade (`ctx.sessions.flush`) antes de um push automático — o writer JSONL do host agrupa eventos live por até 200 ms; no timeout, registra e faz push mesmo assim; `0` = não aguardar |
 | `pullIntervalMinutes` | `0` | Pull periódico a cada N minutos (`0` = desligado, máximo `10080`) |
 | `cwdMap` | `[]` | Projeção de cwd na restauração `[{from, to}]` (o prefixo mais longo vence; cwds multiplataforma sem entrada ficam somente leitura em `<sessionRoot>/--unmapped--`) |
 | `followSessionSymlinks` | `false` | Segue links simbólicos cujo realpath permanece dentro de `sessionRoot` (diagnóstico Android/proot) |

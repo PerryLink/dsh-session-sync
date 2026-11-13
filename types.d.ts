@@ -94,6 +94,12 @@ export interface Config {
   autoPullOnStart?: boolean
   /** 每个 turn/end 后自动推送（配置即授权，不再确认）。 */
   autoPushOnTurnEnd?: boolean
+  /**
+   * 自动推送前等待该会话落盘的上限（ms；默认 2000，0 = 不等待）。
+   * 宿主的 JSONL 持久化对 live 事件有 200ms 批量写窗；等待调用公开的
+   * `ctx.sessions.flush(session)` 落盘屏障，超时只记日志并照常推送。
+   */
+  durabilityTimeoutMs?: number
   /** 周期自动拉取间隔分钟（0 = 关闭；上限 10080）。 */
   pullIntervalMinutes?: number
   /** 确认通道：auto（userQuestions 优先，其次 approval）· userQuestions · approval。 */

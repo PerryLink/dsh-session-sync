@@ -159,7 +159,7 @@ sync: cancelled: approval requires an open turn; /sync commands run between turn
 | `confirmVia` | `auto` | पुष्टि चैनल: `auto` (पहले userQuestions, फिर approval), `userQuestions`, `approval` |
 
 <details>
-<summary>पूरी कॉन्फ़िगरेशन तालिका (23 कुंजियाँ)</summary>
+<summary>पूरी कॉन्फ़िगरेशन तालिका (24 कुंजियाँ)</summary>
 
 | कुंजी | डिफ़ॉल्ट | अर्थ |
 |---|---|---|
@@ -175,6 +175,7 @@ sync: cancelled: approval requires an open turn; /sync commands run between turn
 | `ageIdentity` | `''` | डिक्रिप्शन के लिए पासफ़्रेज़-रहित age गुप्त कुंजी फ़ाइल का पथ; खाली = डिक्रिप्ट नहीं कर सकता, plaintext पर अवनति |
 | `autoPullOnStart` | `false` | प्लगइन माउंट होने पर एक बार pull (कॉन्फ़िग ही अनुमति है; दोबारा पुष्टि नहीं) |
 | `autoPushOnTurnEnd` | `false` | हर बंद टर्न के बाद push |
+| `durabilityTimeoutMs` | `2000` | ऑटो push से पहले सत्र की durability बाधा (`ctx.sessions.flush`) की प्रतीक्षा की सीमा — होस्ट का JSONL writer live इवेंट को 200 ms तक बैच करता है; टाइमआउट पर लॉग करके push जारी रहता है; `0` = प्रतीक्षा नहीं |
 | `pullIntervalMinutes` | `0` | हर N मिनट में आवधिक pull (`0` = बंद, अधिकतम `10080`) |
 | `cwdMap` | `[]` | पुनर्स्थापन के समय cwd प्रोजेक्शन `[{from, to}]` (सबसे लंबा प्रीफ़िक्स जीतता है; बिना मेल वाले क्रॉस-प्लेटफ़ॉर्म cwd `<sessionRoot>/--unmapped--` के नीचे केवल-पढ़ने योग्य रहते हैं) |
 | `followSessionSymlinks` | `false` | उन सिम्बोलिक लिंक का पालन करें जिनका realpath `sessionRoot` के भीतर ही रहता है (Android/proot निदान) |

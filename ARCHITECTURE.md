@@ -19,6 +19,7 @@
 | `lib/paths.mjs` | Path resolution, nesting checks, and fork-file naming — pure |
 | `lib/sanitize.mjs` | Pure display/log redaction (remote-URL credentials, tokens, `key=value` secrets, path-containment display) |
 | `lib/merge.mjs` | Append-only three-way merge classification — pure |
+| `lib/durability.mjs` | Host durability wait before an auto push: calls the public `ctx.sessions.flush(session)` barrier (the JSONL writer batches live events for up to 200 ms) with a timeout; never throws and never blocks the session |
 | `lib/mirror.mjs` | Byte mirror from the session store into the worktree, restore back into the live store, and deletion protection (`node:fs`). Projection-aware: projected local copies are skipped as sources and reattached to the mirror's original header frame; `followSessionSymlinks` opts into contained links only |
 | `lib/cwdmap.mjs` | Restore-time cwd matching/projection — pure (`cwdMap` longest-prefix + segment boundary, host-compatible `projectKey`, `--unmapped--` fallback) |
 | `lib/sessionlog.mjs` | Session-log first frame read/rewrite (`node:zlib`): the header is its own zstd frame, so a projection replaces only that frame |
@@ -75,7 +76,7 @@ Sync metadata (`deviceId`, `lastPullAt`, `lastPushAt`, `lastPushHead`, `lastErro
 Every automatic behavior is a Cordis effect, so stop/hot-reload removes it:
 
 - `autoPullOnStart` — `ctx.effect` pulls once on mount.
-- `autoPushOnTurnEnd` — `ctx.on('session/event')` pushes after `turn/end`.
+- `autoPushOnTurnEnd` — `ctx.on('session/event')` pushes after `turn/end`, but only after `ctx.sessions.flush(session)` has drained the host's buffered writes (bounded by `durabilityTimeoutMs`, default 2000 ms; on timeout it logs and pushes the current on-disk snapshot).
 - `pullIntervalMinutes` — `ctx.effect` wraps a `setInterval` periodic pull (the disposer clears the timer).
 
 Auto runs are covered by the config grant and never re-confirm.

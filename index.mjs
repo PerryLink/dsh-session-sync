@@ -57,6 +57,7 @@ import { collectStatus } from './lib/status.mjs'
 import { renderDiff, renderPull, renderPush, renderStatus, errorValue } from './lib/render.mjs'
 import { confirmSync, hasOpenTurn, makeEventGate, maybeAppendSessionEvent, openTurnFromProjection } from './lib/gate.mjs'
 import { sessionSyncDomainSpec } from './lib/domain.mjs'
+import { waitForSessionDurability } from './lib/durability.mjs'
 import {
   matchCwdMap,
   normalizeCwdMap,
@@ -118,6 +119,7 @@ export function probeIgnorableAppend() {
  * @property {string} [ageIdentity] age 身份文件路径（无口令私钥；空 = 无法解密，降级明文）。
  * @property {boolean} [autoPullOnStart] 挂载时自动拉取一次（配置即授权，不再确认）。
  * @property {boolean} [autoPushOnTurnEnd] 每个 turn/end 后自动推送（配置即授权）。
+ * @property {number} [durabilityTimeoutMs] 自动推送前等该会话落盘的上限 ms（宿主 JSONL 有 200ms 批量写窗；0 = 不等待，超时只记日志并继续）。
  * @property {number} [pullIntervalMinutes] 周期自动拉取间隔分钟（0 = 关闭）。
  * @property {'auto'|'userQuestions'|'approval'} [confirmVia] 确认通道（auto 优先 userQuestions）。
  * @property {ReadonlyArray<{from: string, to: string}>} [cwdMap] 恢复期 cwd 投影表（最长前缀优先；未命中的跨平台 cwd 归一到 sessionRoot/--unmapped--）。
@@ -145,6 +147,7 @@ export const Config = Schema.object({
   ageIdentity: Schema.string().default(DEFAULTS.AGE_IDENTITY),
   autoPullOnStart: Schema.boolean().default(DEFAULTS.AUTO_PULL_ON_START),
   autoPushOnTurnEnd: Schema.boolean().default(DEFAULTS.AUTO_PUSH_ON_TURN_END),
+  durabilityTimeoutMs: Schema.number().default(DEFAULTS.DURABILITY_TIMEOUT_MS),
   pullIntervalMinutes: Schema.number().default(DEFAULTS.PULL_INTERVAL_MINUTES),
   confirmVia: Schema.union(Object.values(CONFIRM_CHANNELS)).default(DEFAULTS.CONFIRM_VIA),
   cwdMap: Schema.array(Schema.object({
@@ -180,6 +183,7 @@ export function resolveConfig(config = {}) {
     ageIdentity: config.ageIdentity ?? DEFAULTS.AGE_IDENTITY,
     autoPullOnStart: config.autoPullOnStart ?? DEFAULTS.AUTO_PULL_ON_START,
     autoPushOnTurnEnd: config.autoPushOnTurnEnd ?? DEFAULTS.AUTO_PUSH_ON_TURN_END,
+    durabilityTimeoutMs: config.durabilityTimeoutMs ?? DEFAULTS.DURABILITY_TIMEOUT_MS,
     pullIntervalMinutes: config.pullIntervalMinutes ?? DEFAULTS.PULL_INTERVAL_MINUTES,
     confirmVia: config.confirmVia ?? DEFAULTS.CONFIRM_VIA,
     cwdMap: normalizeCwdMap(config.cwdMap ?? DEFAULTS.CWD_MAP),
@@ -225,6 +229,9 @@ export function resolveConfig(config = {}) {
   }
   if (!Number.isInteger(resolved.pullIntervalMinutes) || resolved.pullIntervalMinutes < LIMITS.MIN_PULL_INTERVAL_MINUTES || resolved.pullIntervalMinutes > LIMITS.MAX_PULL_INTERVAL_MINUTES) {
     throw badConfig(`pullIntervalMinutes must be an integer in [${LIMITS.MIN_PULL_INTERVAL_MINUTES}, ${LIMITS.MAX_PULL_INTERVAL_MINUTES}]`)
+  }
+  if (!Number.isInteger(resolved.durabilityTimeoutMs) || resolved.durabilityTimeoutMs < LIMITS.MIN_DURABILITY_TIMEOUT_MS || resolved.durabilityTimeoutMs > LIMITS.MAX_DURABILITY_TIMEOUT_MS) {
+    throw badConfig(`durabilityTimeoutMs must be an integer in [${LIMITS.MIN_DURABILITY_TIMEOUT_MS}, ${LIMITS.MAX_DURABILITY_TIMEOUT_MS}]`)
   }
   if (typeof resolved.followSessionSymlinks !== 'boolean') {
     throw badConfig('followSessionSymlinks must be a boolean')
@@ -903,25 +910,45 @@ export function apply(ctx, config = {}) {
     }, `${PLUGIN_NAME}.auto-pull-on-start`)
   }
 
-  // turn/end 自动推送（配置即授权；每轮结束拉一次快照并推送）。
+  // turn/end 自动推送（配置即授权；每轮结束先等该会话落盘，再拉快照推送）。
   if (resolved.autoPushOnTurnEnd) {
     // #30：有些宿主（Android/proot 的 DSH Go）不发 session/event；把"监听器已
     // 注册"记进日志，让外部可判断的是宿主事件还是插件注册。
-    logger.info(`auto push listener registered (session/event turn/end → push); pullIntervalMinutes=${resolved.pullIntervalMinutes}`)
+    logger.info(`auto push listener registered (session/event turn/end → push); pullIntervalMinutes=${resolved.pullIntervalMinutes}; durabilityTimeoutMs=${resolved.durabilityTimeoutMs}`)
+    let durabilityUnsupportedWarned = false
+    const autoPush = async (session) => {
+      // 宿主的 JSONL 持久化对 live 事件有 200ms 批量写窗（见 lib/durability.mjs）：
+      // 不等这层落盘屏障，镜像就会缺最后一条 turn/end —— 跨设备恢复会看到未闭合
+      // 轮次。等待有上限且绝不抛出：超时/失败只记日志，照常推送当前盘上快照。
+      const durability = await waitForSessionDurability(session, {
+        sessions: ctx.sessions,
+        timeoutMs: resolved.durabilityTimeoutMs,
+      })
+      if (durability.timedOut === true) {
+        warn(`auto push: session ${session.id} was not durable within ${resolved.durabilityTimeoutMs}ms; mirroring the current on-disk snapshot`)
+      } else if (durability.unsupported === true) {
+        if (!durabilityUnsupportedWarned) {
+          durabilityUnsupportedWarned = true
+          warn('auto push: this host exposes no sessions.flush(); mirroring without a durability wait (host older than 0.2.2)')
+        }
+      } else if (durability.error !== undefined) {
+        warn(`auto push: durability wait failed for session ${session.id}: ${durability.error}; mirroring the current on-disk snapshot`)
+      }
+      const result = await engine.push()
+      maybeAppendSessionEvent(session, SESSION_EVENTS.PUSH, {
+        sessionId: session.id,
+        ok: result.ok,
+        error: result.error,
+        pushed: result.pushed,
+        mirrored: result.mirrored,
+        deleted: result.deleted,
+        head: result.head,
+      }, eventGate, warn)
+      if (!result.ok) warn(`auto push failed: ${result.error ?? 'unknown error'}`)
+    }
     ctx.on('session/event', (session, event) => {
       if (event.type !== 'turn/end') return
-      void engine.push().then(result => {
-        maybeAppendSessionEvent(session, SESSION_EVENTS.PUSH, {
-          sessionId: session.id,
-          ok: result.ok,
-          error: result.error,
-          pushed: result.pushed,
-          mirrored: result.mirrored,
-          deleted: result.deleted,
-          head: result.head,
-        }, eventGate, warn)
-        if (!result.ok) warn(`auto push failed: ${result.error ?? 'unknown error'}`)
-      })
+      void autoPush(session).catch(error => warn(`auto push failed: ${messageOf(error)}`))
     })
   }
 

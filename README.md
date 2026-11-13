@@ -159,7 +159,7 @@ sync: cancelled: approval requires an open turn; /sync commands run between turn
 | `confirmVia` | `auto` | 确认通道：`auto`（优先 userQuestions，其次 approval）、`userQuestions`、`approval` |
 
 <details>
-<summary>完整配置表（23 个键）</summary>
+<summary>完整配置表（24 个键）</summary>
 
 | 键 | 默认值 | 含义 |
 |---|---|---|
@@ -175,6 +175,7 @@ sync: cancelled: approval requires an open turn; /sync commands run between turn
 | `ageIdentity` | `''` | 无口令 age 私钥文件路径（用于解密）；空 = 无法解密、降级明文 |
 | `autoPullOnStart` | `false` | 插件挂载时拉取一次（配置即授权，不再确认） |
 | `autoPushOnTurnEnd` | `false` | 每个关闭轮次后推送 |
+| `durabilityTimeoutMs` | `2000` | 自动推送前等待该会话落盘的上限：宿主 JSONL 对 live 事件有 200ms 批量写窗，这里调用公开的 `ctx.sessions.flush` 落盘屏障；超时只记日志并照常推送；`0` = 不等待 |
 | `pullIntervalMinutes` | `0` | 每 N 分钟周期拉取（`0` = 关闭，最大 `10080`） |
 | `cwdMap` | `[]` | 恢复期 cwd 投影表 `[{from, to}]`（最长前缀优先；未命中的跨平台 cwd 归一到 `<sessionRoot>/--unmapped--`，只读） |
 | `followSessionSymlinks` | `false` | 是否跟随 realpath 仍在 `sessionRoot` 内的符号链接（Android/proot 诊断） |

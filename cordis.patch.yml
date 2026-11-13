@@ -35,6 +35,12 @@
         # covered by the config grant and never re-confirm.
         autoPullOnStart: false
         autoPushOnTurnEnd: false
+        # Upper bound (ms) for waiting on the host's session durability barrier
+        # (ctx.sessions.flush) before an auto push. The JSONL writer batches live
+        # events for up to 200 ms, so a push issued exactly at turn/end can miss
+        # the final event; on timeout the plugin logs and pushes the current
+        # on-disk snapshot anyway. 0 = do not wait.
+        durabilityTimeoutMs: 2000
         pullIntervalMinutes: 0
         # Confirmation channel for /sync pull|push and the sync_* tools:
         # auto (userQuestions first, then approval) · userQuestions · approval.

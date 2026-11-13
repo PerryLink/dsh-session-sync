@@ -159,7 +159,7 @@ Most-used keys:
 | `confirmVia` | `auto` | Confirmation channel: `auto` (userQuestions first, then approval), `userQuestions`, `approval` |
 
 <details>
-<summary>Full configuration table (23 keys)</summary>
+<summary>Full configuration table (24 keys)</summary>
 
 | Key | Default | Meaning |
 |---|---|---|
@@ -175,6 +175,7 @@ Most-used keys:
 | `ageIdentity` | `''` | Path to a passphrase-less age secret key for decryption; empty = cannot decrypt, degrades to plaintext |
 | `autoPullOnStart` | `false` | Pull once when the plugin mounts (config is the grant; no re-confirm) |
 | `autoPushOnTurnEnd` | `false` | Push after every closed turn |
+| `durabilityTimeoutMs` | `2000` | Upper bound for waiting on the session durability barrier (`ctx.sessions.flush`) before an auto push — the host JSONL writer batches live events for up to 200 ms; on timeout it logs and pushes anyway; `0` = do not wait |
 | `pullIntervalMinutes` | `0` | Periodic pull every N minutes (`0` = off, max `10080`) |
 | `cwdMap` | `[]` | Restore-time cwd projection `[{from, to}]` (longest prefix wins; unmatched cross-platform cwds go read-only under `<sessionRoot>/--unmapped--`) |
 | `followSessionSymlinks` | `false` | Follow symbolic links whose realpath stays inside `sessionRoot` (Android/proot diagnostics) |

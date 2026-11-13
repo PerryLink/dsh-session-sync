@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.3.1] - 2026-11-14
+
+### Fixed
+
+- **An auto push no longer mirrors a `turn/end` the host has not written yet.** The JSONL backend buffers live session events for up to 200 ms (`LIVE_WRITE_BATCH_MAX_DELAY_MS`, `session-persistence-jsonl/src/storage.ts:37`) and only `persistBatch`es on the timer or a `session/flush` (`:275-282`, `:555-562`). The `turn/end` listener used to `push()` immediately, so the mirror could miss the final `turn/end` line — or the whole session file on the first append — and a cross-device restore then saw an unclosed turn. The listener now awaits the host's public durability barrier `ctx.sessions.flush(session)` (`SessionStore.flush` → `session/flush` → backend `drainLive` + `handle.flush`) before mirroring; the wait yields one microtask first so the persistence router has enqueued the very event being handled. It is bounded by the new `durabilityTimeoutMs` (default `2000`, `0` = do not wait): a timeout, a rejecting barrier, or a host without `sessions.flush` (older than 0.2.2) is logged once and the push continues with the current on-disk snapshot, so a stalled backend can never block a turn.
+
+### Changed
+
+- devDependencies move from the `0.2.2-rc.1` wave to `0.2.2-rc.3`, including an explicit `@deepseek-ai/dsh-session-projection` pin so the optional peer no longer keeps a `0.2.2-rc.1` copy (and its zod 4.4.3) in the lockfile. The production `zod` pin moves 4.4.3 → 4.6.6 to match `dsh-storage-domain@0.2.2-rc.3`; peer ranges and `engines.dsh` already cover `>=0.2.2-0 <0.3.0`.
+
 ## [0.3.0] - 2026-11-13
 
 ### Added
