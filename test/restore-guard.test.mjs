@@ -13,6 +13,7 @@ import { constants, zstdCompressSync } from 'node:zlib'
 import { restoreSessionRoot, pruneRestoredSessions, RESTORE_STATE_FILE } from '../lib/mirror.mjs'
 import { normalizeCwdMap, projectKey } from '../lib/cwdmap.mjs'
 import { readSessionHeader } from '../lib/sessionlog.mjs'
+import { FORK_NAME_RE } from '../lib/constants.mjs'
 
 const ZSTD_OPTIONS = { params: { [constants.ZSTD_c_checksumFlag]: 1 } }
 const SESSION_ID = 'session-11111111-2222-3333-4444-555555555555'
@@ -245,6 +246,126 @@ test('a diverged skip preserves the mirror bytes as a fork file, deduplicated', 
   assert.equal(second.divergedSkipped, 1)
   const forksAgain = (await fs.readdir(path.join(mirrorRoot, 's1'))).filter(n => n.startsWith('session.v4.jsonl.zstd.remote-fork-'))
   assert.equal(forksAgain.length, 1, 'an identical fork must not be duplicated')
+})
+
+/** 当前秒 ±1s 的 fork 时间戳（覆盖秒边界）。 */
+function forkStamps() {
+  const now = Date.now()
+  return [-1000, 0, 1000].map(d => new Date(now + d).toISOString().replace(/[-:T]/gu, '').slice(0, 14))
+}
+
+test('a projected diverged skip forks the raw mirror bytes, not the projected rewrite', async (t) => {
+  const f = await mappedFixture(t)
+  // 镜像前进到 v2（原设备 header）；活副本长出不同的帧 → 分叉。
+  const v2 = Buffer.concat([zstdFrame(headerLine()), f.event1, f.event2])
+  await fs.writeFile(f.mirrorPath, v2)
+  const e3 = zstdFrame('{"type":"user/message","seq":2}\n')
+  const grown = Buffer.concat([await fs.readFile(f.livePath), e3])
+  await fs.writeFile(f.livePath, grown)
+  const second = await restoreSessionRoot({ ...f.deps, deviceShort: 'abcd1234' })
+  assert.equal(second.divergedSkipped, 1)
+  assert.deepEqual(await fs.readFile(f.livePath), grown, 'the live tail survives')
+  const dir = path.dirname(f.mirrorPath)
+  const forks = (await fs.readdir(dir)).filter(n => n.startsWith('session.v4.jsonl.zstd.remote-fork-'))
+  assert.equal(forks.length, 1)
+  assert.deepEqual(await fs.readFile(path.join(dir, forks[0])), v2, 'the fork must carry the origin-device bytes, not the local cwd rewrite')
+})
+
+test('dedup recognizes an older fork with the same content (deterministic)', async (t) => {
+  const { root, clean } = await makeTemp()
+  t.after(clean)
+  const sessionRoot = path.join(root, 'sessions')
+  const mirrorRoot = path.join(root, 'repo', 'sessions')
+  await fs.mkdir(path.join(sessionRoot, 's1'), { recursive: true })
+  await fs.mkdir(path.join(mirrorRoot, 's1'), { recursive: true })
+  const mirrorBytes = Buffer.from('frame-A\nframe-C\n')
+  await fs.writeFile(path.join(mirrorRoot, 's1', 'session.v4.jsonl.zstd'), mirrorBytes)
+  await fs.writeFile(path.join(sessionRoot, 's1', 'session.v4.jsonl.zstd'), Buffer.from('frame-A\nframe-B\n'))
+  // 预植一个旧时间戳的同内容 fork：去重必须认出它，与本次恢复的秒戳无关。
+  await fs.writeFile(path.join(mirrorRoot, 's1', 'session.v4.jsonl.zstd.remote-fork-20260101000000-abcd1234'), mirrorBytes)
+  const result = await restoreSessionRoot({ mirrorRoot, sessionRoot, deviceShort: 'abcd1234' })
+  assert.equal(result.divergedSkipped, 1)
+  const forks = (await fs.readdir(path.join(mirrorRoot, 's1'))).filter(n => n.startsWith('session.v4.jsonl.zstd.remote-fork-'))
+  assert.equal(forks.length, 1, 'an identical older fork must not be duplicated')
+})
+
+test('a same-second fork collision keeps the existing fork and takes a suffix', async (t) => {
+  const { root, clean } = await makeTemp()
+  t.after(clean)
+  const sessionRoot = path.join(root, 'sessions')
+  const mirrorRoot = path.join(root, 'repo', 'sessions')
+  await fs.mkdir(path.join(sessionRoot, 's1'), { recursive: true })
+  await fs.mkdir(path.join(mirrorRoot, 's1'), { recursive: true })
+  const mirrorBytes = Buffer.from('frame-A\nframe-C\n')
+  await fs.writeFile(path.join(mirrorRoot, 's1', 'session.v4.jsonl.zstd'), mirrorBytes)
+  await fs.writeFile(path.join(sessionRoot, 's1', 'session.v4.jsonl.zstd'), Buffer.from('frame-A\nframe-B\n'))
+  // 在预测的 fork 名（当前秒 ±1s）上预植不同内容的 fork：合并写者与恢复写者
+  // 秒级相撞的形状。既有 fork 绝不被覆盖；新字节取后缀名。
+  const planted = forkStamps().map(s => `session.v4.jsonl.zstd.remote-fork-${s}-abcd1234`)
+  for (const name of planted) await fs.writeFile(path.join(mirrorRoot, 's1', name), 'OTHER\n')
+  const result = await restoreSessionRoot({ mirrorRoot, sessionRoot, deviceShort: 'abcd1234' })
+  assert.equal(result.divergedSkipped, 1)
+  for (const name of planted) {
+    assert.equal(await fs.readFile(path.join(mirrorRoot, 's1', name), 'utf8'), 'OTHER\n', `${name} must not be overwritten`)
+  }
+  const all = (await fs.readdir(path.join(mirrorRoot, 's1'))).filter(n => n.startsWith('session.v4.jsonl.zstd.remote-fork-'))
+  const preserved = all.filter(n => !planted.includes(n))
+  assert.equal(preserved.length, 1, 'the mirror bytes must land in a suffixed fork')
+  assert.match(preserved[0], /\.remote-fork-\d{14}-abcd1234\.\d+$/u)
+  assert.equal(FORK_NAME_RE.test(preserved[0]), true, 'the suffixed name must still be recognized as a fork')
+  assert.deepEqual(await fs.readFile(path.join(mirrorRoot, 's1', preserved[0])), mirrorBytes)
+})
+
+test('the default device short id produces a recognized fork name and dedups', async (t) => {
+  const { root, clean } = await makeTemp()
+  t.after(clean)
+  const sessionRoot = path.join(root, 'sessions')
+  const mirrorRoot = path.join(root, 'repo', 'sessions')
+  await fs.mkdir(path.join(sessionRoot, 's1'), { recursive: true })
+  await fs.mkdir(path.join(mirrorRoot, 's1'), { recursive: true })
+  const mirrorBytes = Buffer.from('frame-A\nframe-C\n')
+  await fs.writeFile(path.join(mirrorRoot, 's1', 'session.v4.jsonl.zstd'), mirrorBytes)
+  await fs.writeFile(path.join(sessionRoot, 's1', 'session.v4.jsonl.zstd'), Buffer.from('frame-A\nframe-B\n'))
+  const deps = { mirrorRoot, sessionRoot } // no deviceShort
+  const first = await restoreSessionRoot(deps)
+  assert.equal(first.divergedSkipped, 1)
+  const forks = (await fs.readdir(path.join(mirrorRoot, 's1'))).filter(n => n.startsWith('session.v4.jsonl.zstd.remote-fork-'))
+  assert.equal(forks.length, 1)
+  assert.match(forks[0], /-unknown0$/u, 'the fallback must be 8 chars so FORK_NAME_RE recognizes it')
+  assert.equal(FORK_NAME_RE.test(forks[0]), true)
+  const second = await restoreSessionRoot(deps)
+  assert.equal(second.divergedSkipped, 1)
+  const again = (await fs.readdir(path.join(mirrorRoot, 's1'))).filter(n => n.startsWith('session.v4.jsonl.zstd.remote-fork-'))
+  assert.equal(again.length, 1, 'default-device forks must dedup')
+})
+
+test('a link planted at the predicted fork name is neither followed nor overwritten', async (t) => {
+  const { root, clean } = await makeTemp()
+  t.after(clean)
+  const sessionRoot = path.join(root, 'sessions')
+  const mirrorRoot = path.join(root, 'repo', 'sessions')
+  await fs.mkdir(path.join(sessionRoot, 's1'), { recursive: true })
+  await fs.mkdir(path.join(mirrorRoot, 's1'), { recursive: true })
+  const mirrorBytes = Buffer.from('frame-A\nframe-C\n')
+  await fs.writeFile(path.join(mirrorRoot, 's1', 'session.v4.jsonl.zstd'), mirrorBytes)
+  await fs.writeFile(path.join(sessionRoot, 's1', 'session.v4.jsonl.zstd'), Buffer.from('frame-A\nframe-B\n'))
+  // 根外受害者文件 + 预植硬链接（Windows 无需特权；symlink 需要，故用硬链接）。
+  const victim = path.join(root, 'victim.bin')
+  await fs.writeFile(victim, 'VICTIM\n')
+  const planted = forkStamps().map(s => `session.v4.jsonl.zstd.remote-fork-${s}-abcd1234`)
+  try {
+    for (const name of planted) await fs.link(victim, path.join(mirrorRoot, 's1', name))
+  } catch (error) {
+    if (error?.code === 'EPERM' || error?.code === 'EXDEV' || error?.code === 'EACCES') return t.skip('hardlink creation not permitted here')
+    throw error
+  }
+  const result = await restoreSessionRoot({ mirrorRoot, sessionRoot, deviceShort: 'abcd1234' })
+  assert.equal(result.divergedSkipped, 1)
+  assert.equal(await fs.readFile(victim, 'utf8'), 'VICTIM\n', 'the planted link must not be written through')
+  const all = (await fs.readdir(path.join(mirrorRoot, 's1'))).filter(n => n.startsWith('session.v4.jsonl.zstd.remote-fork-'))
+  const fresh = all.filter(n => !planted.includes(n))
+  assert.equal(fresh.length, 1, 'the mirror bytes must land in a new suffixed fork')
+  assert.deepEqual(await fs.readFile(path.join(mirrorRoot, 's1', fresh[0])), mirrorBytes)
 })
 
 test('absent mirrorRoot returns the full zero shape including guard counters', async (t) => {
