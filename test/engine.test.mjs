@@ -384,6 +384,9 @@ test('a live log that grows during the pull window is never truncated by the res
   // 远端推进一个无关文件，让下一次 pull 真正走到 merge+restore。
   await writeSession(a.sessionRoot, 'p/other/session.v4.jsonl.zstd', 'unrelated\n')
   assert.equal((await a.engine.push()).ok, true)
+  // B 本地也放一个无关文件：checkpoint 才有可提交的内容（活日志此刻与镜像一致，
+  // 否则 checkpoint 是空操作），从而钉住「本次 pull 确实提交了 checkpoint」。
+  await writeSession(b.sessionRoot, 'p/local-note/session.v4.jsonl.zstd', 'local\n')
 
   // 故障注入：fetch 发生在 checkpoint 提交之后、merge/restore 之前——正是
   // 2026-11-14 事故里宿主追加新帧的窗口。B 的活日志在此期间长出一帧。
@@ -392,8 +395,11 @@ test('a live log that grows during the pull window is never truncated by the res
     await writeSession(b.sessionRoot, logRel, 'frame-A\nframe-B\n')
     return origFetch(opts)
   }
+  const checkpointCount = () => Number(spawnSync('git', ['rev-list', '--count', '--grep=local checkpoint before pull', 'HEAD'], { cwd: b.repoDir, encoding: 'utf8' }).stdout.trim())
+  const checkpointsBefore = checkpointCount()
   const pull = await b.engine.pull()
   assert.equal(pull.ok, true, `B pull failed: ${pull.error}`)
+  assert.equal(checkpointCount(), checkpointsBefore + 1, 'this pull must commit its own checkpoint before the restore')
   // 守卫：活字节领先镜像 → 绝不覆写，响亮报告。
   assert.equal(await fs.readFile(path.join(b.sessionRoot, ...logRel.split('/')), 'utf8'), 'frame-A\nframe-B\n', 'the live tail must survive the restore')
   assert.ok(pull.warnings.some(w => w.includes('grew past the mirror')), `expected a live-ahead warning, got: ${JSON.stringify(pull.warnings)}`)
@@ -403,4 +409,54 @@ test('a live log that grows during the pull window is never truncated by the res
   const push = await b.engine.push()
   assert.equal(push.ok, true, `B push failed: ${push.error}`)
   assert.equal(await readWorktree(b.repoDir, `sessions/${logRel}`), 'frame-A\nframe-B\n')
+})
+
+test('a diverged restore keeps both sides at the remote tip on the next push', { skip: !GIT_OK && 'git binary not available' }, async (t) => {
+  const { root, clean } = await makeTemp()
+  t.after(clean)
+  const remotePath = path.join(root, 'remote.git')
+  spawnSync('git', ['init', '--bare', remotePath], { stdio: 'ignore' })
+
+  const eventsA = { meta: [], errors: [], forks: [] }
+  const eventsB = { meta: [], errors: [], forks: [] }
+  const a = await setupDevice(root, 'A', 'aaaaaaaa', remotePath, eventsA)
+  const b = await setupDevice(root, 'B', 'bbbbbbbb', remotePath, eventsB)
+  const logRel = 'p/live/session.v4.jsonl.zstd'
+  const mirrorRel = `sessions/${logRel}`
+  const tipShow = (rel) => spawnSync('git', ['--git-dir', remotePath, 'show', `HEAD:${rel}`], { encoding: 'utf8' }).stdout
+  const tipFiles = () => spawnSync('git', ['--git-dir', remotePath, 'ls-tree', '-r', '--name-only', 'HEAD'], { encoding: 'utf8' }).stdout.split('\n').filter(Boolean)
+
+  await writeSession(a.sessionRoot, logRel, 'A1\n')
+  assert.equal((await a.engine.push()).ok, true)
+  assert.equal((await b.engine.pull()).ok, true)
+
+  // 远端带上 A 的尾部前进。B 的活日志在 checkpoint→restore 窗口里长出不同的
+  // 尾部（注入点在 fetch，与真实事故同形）：checkpoint 抓到 A1，合并把镜像推进
+  // 到 A1+A2，恢复时活字节 A1+B1 与镜像分叉 → 守卫跳过并留存 fork。
+  await writeSession(a.sessionRoot, logRel, 'A1\nA2\n')
+  assert.equal((await a.engine.push()).ok, true)
+  const origFetch = b.git.fetch.bind(b.git)
+  b.git.fetch = async (opts) => {
+    await writeSession(b.sessionRoot, logRel, 'A1\nB1\n')
+    return origFetch(opts)
+  }
+
+  const pull = await b.engine.pull()
+  assert.equal(pull.ok, true, `B pull failed: ${pull.error}`)
+  assert.ok(pull.warnings.some(w => w.includes('preserved as fork files')), `expected a diverged warning, got: ${JSON.stringify(pull.warnings)}`)
+  assert.equal(await fs.readFile(path.join(b.sessionRoot, ...logRel.split('/')), 'utf8'), 'A1\nB1\n', 'B live keeps its tail')
+
+  const push = await b.engine.push()
+  assert.equal(push.ok, true, `B push failed: ${push.error}`)
+  // keep-both 必须在共享尖端成立：B 的尾部是日志本体，A 的尾部以 fork 留存。
+  // 没有 fork 留存时，这次 push 会快进绕过合并分类，把 A2 从尖端静默丢掉。
+  assert.equal(tipShow(mirrorRel), 'A1\nB1\n')
+  const forkAtTip = tipFiles().find(f => f.startsWith(`${mirrorRel}.remote-fork-`))
+  assert.ok(forkAtTip, 'the remote tip must carry the mirror side as a fork file')
+  assert.equal(tipShow(forkAtTip), 'A1\nA2\n')
+
+  // 调和不得截断 A：A 拉取后活尾部仍在。
+  const pullA = await a.engine.pull()
+  assert.equal(pullA.ok, true, `A pull failed: ${pullA.error}`)
+  assert.equal(await fs.readFile(path.join(a.sessionRoot, ...logRel.split('/')), 'utf8'), 'A1\nA2\n', 'A live keeps its tail')
 })
