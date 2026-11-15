@@ -129,3 +129,36 @@ test('a second bootstrap is idempotent and still leaves the outer untouched', { 
   assert.equal(git(outer, 'config', 'user.name'), 'OUTER-NAME')
   assert.equal(git(outer, 'remote', 'get-url', 'origin'), 'https://example.com/outer.git')
 })
+
+test('a case-variant repoDir path at the true root is still the same repo (Windows)', { skip: !GIT_OK && 'git binary not available' }, async (t) => {
+  if (process.platform !== 'win32') return t.skip('case-insensitive paths are Windows-specific; the symlink test pins realpath on POSIX')
+  const { root, clean } = await makeTemp()
+  t.after(clean)
+  const repoDir = path.join(root, 'MirrorCase')
+  await fs.mkdir(repoDir, { recursive: true })
+  await backend(repoDir).bootstrap()
+  const head = git(repoDir, 'rev-parse', 'HEAD')
+  const variant = path.join(root, 'mirrorcase')
+  assert.equal(await backend(variant).isRepo(), true, 'realpath must canonicalize case, not compare raw strings')
+  await backend(variant).bootstrap()
+  assert.equal(git(repoDir, 'rev-parse', 'HEAD'), head, 'no spurious re-init or commit')
+})
+
+test('a symlinked repoDir resolves to its target root', { skip: !GIT_OK && 'git binary not available' }, async (t) => {
+  const { root, clean } = await makeTemp()
+  t.after(clean)
+  const target = path.join(root, 'target')
+  await fs.mkdir(target, { recursive: true })
+  await backend(target).bootstrap()
+  const head = git(target, 'rev-parse', 'HEAD')
+  const link = path.join(root, 'link')
+  try {
+    await fs.symlink(target, link, process.platform === 'win32' ? 'junction' : 'dir')
+  } catch (error) {
+    if (error?.code === 'EPERM' || error?.code === 'EACCES') return t.skip('directory link creation not permitted here')
+    throw error
+  }
+  assert.equal(await backend(link).isRepo(), true, 'realpath must resolve the link to the target root')
+  await backend(link).bootstrap()
+  assert.equal(git(target, 'rev-parse', 'HEAD'), head, 'bootstrap through the link touches only the target repo')
+})
