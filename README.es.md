@@ -244,6 +244,7 @@ Los archivos de sesión se copian como bytes opacos y nunca se analizan; cada co
 ## Límites de seguridad
 
 - **Nunca sobrescribe en silencio.** El merge de tres vías append-only conserva ambos lados ante cualquier divergencia, incluido delete/modify (los bytes modificados se conservan, la intención de borrado se respeta); los archivos fork nunca se eliminan y git nunca fuerza push, resetea, rebase ni cambia de rama.
+- **Repositorio dedicado.** `repoDir` debe ser la raíz de su propio worktree git: si es solo un subdirectorio de un repositorio externo no relacionado, el plugin inicializa un repositorio espejo dedicado en `repoDir` y nunca escribe configuración, origin ni commits en el repositorio externo.
 - **Contención de rutas.** Los archivos se reflejan como bytes opacos con enlaces simbólicos rechazados y cada ruta unida se comprueba por contención (`PATH_UNSAFE` falla alto).
 - **Salida saneada.** Las credenciales de URL remota, los tokens y los secretos `key=value` se redactan antes de llegar al modelo o al registro; la visualización de rutas rechaza todo lo que esté fuera de su raíz.
 - **Sin almacenamiento de credenciales.** El plugin no almacena credenciales; las credenciales de git viven en tu helper de credenciales normal. Las identidades/destinatarios age los gestionas tú, y las claves nunca entran en el repositorio de sincronización.
