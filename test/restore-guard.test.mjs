@@ -368,6 +368,66 @@ test('a link planted at the predicted fork name is neither followed nor overwrit
   assert.deepEqual(await fs.readFile(path.join(mirrorRoot, 's1', fresh[0])), mirrorBytes)
 })
 
+test('an equal-content symlink at a predicted fork name must not suppress the real fork', async (t) => {
+  const { root, clean } = await makeTemp()
+  t.after(clean)
+  const sessionRoot = path.join(root, 'sessions')
+  const mirrorRoot = path.join(root, 'repo', 'sessions')
+  await fs.mkdir(path.join(sessionRoot, 's1'), { recursive: true })
+  await fs.mkdir(path.join(mirrorRoot, 's1'), { recursive: true })
+  const mirrorBytes = Buffer.from('frame-A\nframe-C\n')
+  const mirrorPath = path.join(mirrorRoot, 's1', 'session.v4.jsonl.zstd')
+  await fs.writeFile(mirrorPath, mirrorBytes)
+  await fs.writeFile(path.join(sessionRoot, 's1', 'session.v4.jsonl.zstd'), Buffer.from('frame-A\nframe-B\n'))
+  // 远端可预植等内容的符号链接（git 在 POSIX 上按 120000 检出）：去重不得把它
+  // 当成「已留存」，否则真正的 fork 不写，谱系在其他设备上悬空丢失。
+  const planted = forkStamps().map(s => `session.v4.jsonl.zstd.remote-fork-${s}-abcd1234`)
+  try {
+    for (const name of planted) await fs.symlink(mirrorPath, path.join(mirrorRoot, 's1', name))
+  } catch (error) {
+    if (error?.code === 'EPERM' || error?.code === 'EACCES') return t.skip('file symlink creation needs privilege here; CI POSIX arms run this')
+    throw error
+  }
+  const result = await restoreSessionRoot({ mirrorRoot, sessionRoot, deviceShort: 'abcd1234' })
+  assert.equal(result.divergedSkipped, 1)
+  const all = (await fs.readdir(path.join(mirrorRoot, 's1'))).filter(n => n.startsWith('session.v4.jsonl.zstd.remote-fork-'))
+  const fresh = all.filter(n => !planted.includes(n))
+  assert.equal(fresh.length, 1, 'a real fork must be written despite the equal-content links')
+  assert.deepEqual(await fs.readFile(path.join(mirrorRoot, 's1', fresh[0])), mirrorBytes)
+  for (const name of planted) {
+    assert.equal((await fs.lstat(path.join(mirrorRoot, 's1', name))).isSymbolicLink(), true, 'the planted links stay untouched')
+  }
+})
+
+test('an equal-content hardlink at a predicted fork name is benign (bytes survive as a regular file)', async (t) => {
+  const { root, clean } = await makeTemp()
+  t.after(clean)
+  const sessionRoot = path.join(root, 'sessions')
+  const mirrorRoot = path.join(root, 'repo', 'sessions')
+  await fs.mkdir(path.join(sessionRoot, 's1'), { recursive: true })
+  await fs.mkdir(path.join(mirrorRoot, 's1'), { recursive: true })
+  const mirrorBytes = Buffer.from('frame-A\nframe-C\n')
+  await fs.writeFile(path.join(mirrorRoot, 's1', 'session.v4.jsonl.zstd'), mirrorBytes)
+  await fs.writeFile(path.join(sessionRoot, 's1', 'session.v4.jsonl.zstd'), Buffer.from('frame-A\nframe-B\n'))
+  const planted = forkStamps().map(s => `session.v4.jsonl.zstd.remote-fork-${s}-abcd1234`)
+  try {
+    for (const name of planted) await fs.link(path.join(mirrorRoot, 's1', 'session.v4.jsonl.zstd'), path.join(mirrorRoot, 's1', name))
+  } catch (error) {
+    if (error?.code === 'EPERM' || error?.code === 'EXDEV' || error?.code === 'EACCES') return t.skip('hardlink creation not permitted here')
+    throw error
+  }
+  const result = await restoreSessionRoot({ mirrorRoot, sessionRoot, deviceShort: 'abcd1234' })
+  assert.equal(result.divergedSkipped, 1)
+  // 硬链接是常规文件：去重接受它是良性的，字节以普通 blob 存续（git 提交 100644）。
+  const all = (await fs.readdir(path.join(mirrorRoot, 's1'))).filter(n => n.startsWith('session.v4.jsonl.zstd.remote-fork-'))
+  let preserved = 0
+  for (const name of all) {
+    const st = await fs.lstat(path.join(mirrorRoot, 's1', name))
+    if (st.isFile() && (await fs.readFile(path.join(mirrorRoot, 's1', name))).equals(mirrorBytes)) preserved += 1
+  }
+  assert.ok(preserved >= 1, 'the mirror bytes must survive as a regular file')
+})
+
 test('absent mirrorRoot returns the full zero shape including guard counters', async (t) => {
   const { root, clean } = await makeTemp()
   t.after(clean)
