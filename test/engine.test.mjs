@@ -362,3 +362,45 @@ test('a pulled session survives every later sync, while real deletions still pro
   assert.equal((await a.engine.pull()).ok, true)
   await assert.rejects(readWorktree(a.repoDir, rel), 'a deleted session is not resurrected by B')
 })
+
+test('a live log that grows during the pull window is never truncated by the restore', { skip: !GIT_OK && 'git binary not available' }, async (t) => {
+  const { root, clean } = await makeTemp()
+  t.after(clean)
+  const remotePath = path.join(root, 'remote.git')
+  spawnSync('git', ['init', '--bare', remotePath], { stdio: 'ignore' })
+
+  const eventsA = { meta: [], errors: [], forks: [] }
+  const eventsB = { meta: [], errors: [], forks: [] }
+  const a = await setupDevice(root, 'A', 'aaaaaaaa', remotePath, eventsA)
+  const b = await setupDevice(root, 'B', 'bbbbbbbb', remotePath, eventsB)
+  const logRel = 'p/live/session.v4.jsonl.zstd'
+
+  // A 推一个会话日志，B 拉下来（活库与镜像一致）。
+  await writeSession(a.sessionRoot, logRel, 'frame-A\n')
+  assert.equal((await a.engine.push()).ok, true)
+  assert.equal((await b.engine.pull()).ok, true)
+  assert.equal(await fs.readFile(path.join(b.sessionRoot, ...logRel.split('/')), 'utf8'), 'frame-A\n')
+
+  // 远端推进一个无关文件，让下一次 pull 真正走到 merge+restore。
+  await writeSession(a.sessionRoot, 'p/other/session.v4.jsonl.zstd', 'unrelated\n')
+  assert.equal((await a.engine.push()).ok, true)
+
+  // 故障注入：fetch 发生在 checkpoint 提交之后、merge/restore 之前——正是
+  // 2026-11-14 事故里宿主追加新帧的窗口。B 的活日志在此期间长出一帧。
+  const origFetch = b.git.fetch.bind(b.git)
+  b.git.fetch = async (opts) => {
+    await writeSession(b.sessionRoot, logRel, 'frame-A\nframe-B\n')
+    return origFetch(opts)
+  }
+  const pull = await b.engine.pull()
+  assert.equal(pull.ok, true, `B pull failed: ${pull.error}`)
+  // 守卫：活字节领先镜像 → 绝不覆写，响亮报告。
+  assert.equal(await fs.readFile(path.join(b.sessionRoot, ...logRel.split('/')), 'utf8'), 'frame-A\nframe-B\n', 'the live tail must survive the restore')
+  assert.ok(pull.warnings.some(w => w.includes('grew past the mirror')), `expected a live-ahead warning, got: ${JSON.stringify(pull.warnings)}`)
+  assert.equal(await readWorktree(b.repoDir, `sessions/${logRel}`), 'frame-A\n', 'the mirror keeps the checkpoint bytes until the next push')
+
+  // 合流收尾：下一次 push 把活尾部带回镜像（守卫不阻塞正常同步）。
+  const push = await b.engine.push()
+  assert.equal(push.ok, true, `B push failed: ${push.error}`)
+  assert.equal(await readWorktree(b.repoDir, `sessions/${logRel}`), 'frame-A\nframe-B\n')
+})
