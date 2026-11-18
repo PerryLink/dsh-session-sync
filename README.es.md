@@ -308,7 +308,7 @@ El espejo **nunca sigue enlaces simbólicos** por defecto (límite de seguridad)
 
 | Superficie | Estado |
 |---|---|
-| Harness | DeepSeek Harness `dsh-v0.2.1-alpha.1` (tag de GitHub, verificado el 2026-09-25: cadena completa de puertas contra los peers fijados `0.1.7-rc.2`). Línea de dependencia npm `0.1.7-rc.2`, peers `>=0.1.2-rc.1 <0.2.0 \|\| >=0.1.5-alpha.1 <0.2.0 \|\| >=0.1.6-0 <0.2.0 \|\| >=0.1.7-0 <0.2.0`. (adaptado el 2026-10-04): el aviso de fork por conflicto lleva el source kind propio del plugin (producer-owned) — el harness retiró el kind compartido `plugin` y lo rechaza al releer. |
+| Harness | DeepSeek Harness `dsh-v0.2.2-rc.4` (tag de GitHub, verificado el 2026-11-18: cadena completa de puertas contra los peers fijados `0.1.7-rc.2`). Línea de dependencia npm `0.1.7-rc.2`, peers `>=0.1.2-rc.1 <0.2.0 \|\| >=0.1.5-alpha.1 <0.2.0 \|\| >=0.1.6-0 <0.2.0 \|\| >=0.1.7-0 <0.2.0 \|\| >=0.2.2-0 <0.3.0`. (adaptado el 2026-11-18): el aviso de fork por conflicto lleva el source kind propio del plugin (producer-owned) — el harness retiró el kind compartido `plugin` y lo rechaza al releer. |
 | Node | `^22.19.0 \|\| >=24.9.0` |
 | Plataformas | Dondequiera que corran `git` y DSH (espejo basado en git; sin código específico de plataforma) |
 | Modelo | Modelos solo de texto totalmente soportados; no se requiere visión ni capacidad extra de modelo |
