@@ -313,6 +313,8 @@ cwdMap:
 | 平台 | 任何能运行 `git` 和 DSH 的环境（基于 git 镜像；无平台特定代码） |
 | 模型 | 纯文本模型即可完整支持；无需视觉或额外模型能力 |
 
+**跨设备同步需要兼容的 DSH 引擎版本。** 会话日志里的 `subagent/catalog` 事件带版本化 fact；较旧的引擎打开较新引擎（例如 0.2.2-rc.3）写入的 version-3 fact 时，会把整份日志报成 `stored log is corrupt: ... subagent/catalog requires a supported versioned catalog fact`。镜像字节本身是好的，问题在读端；不含 subagent 的会话通常不受影响。请让两端 DSH 版本接近，或先升级旧端再打开这类会话。
+
 ## 生态与质量
 
 - [Gitee 镜像](https://gitee.com/perrylink/dsh-session-sync)（同步镜像，以 GitHub 为准）

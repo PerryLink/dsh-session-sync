@@ -313,6 +313,8 @@ O espelho **nunca segue links simbólicos** por padrão (limite de segurança). 
 | Plataformas | Onde quer que `git` e DSH rodem (espelho baseado em git; sem código específico de plataforma) |
 | Modelo | Modelos apenas de texto totalmente suportados; nenhuma visão ou capacidade extra de modelo é necessária |
 
+**A sincronização entre dispositivos precisa de versões compatíveis do motor DSH.** O evento `subagent/catalog` carrega um fact versionado; um motor antigo que lê um fact version 3 gravado por um mais novo (por exemplo 0.2.2-rc.3) rejeita o log inteiro como `stored log is corrupt: ... subagent/catalog requires a supported versioned catalog fact`. Os bytes replicados estão corretos — o leitor é antigo demais. Sessões sem subagentes normalmente não são afetadas. Mantenha os dois motores em versões próximas, ou atualize o dispositivo antigo antes de abrir essas sessões.
+
 ## Ecossistema e qualidade
 
 - [Espelho no Gitee](https://gitee.com/perrylink/dsh-session-sync) (espelho sincronizado; o GitHub é canônico)

@@ -313,6 +313,8 @@ The mirror **never follows symbolic links** by default (a safety boundary). Andr
 | Platforms | Anywhere `git` and DSH run (git-based mirror; no platform-specific code) |
 | Model | Text-only models fully supported; no vision or extra model capability required |
 
+**Cross-device sync needs compatible DSH engine versions.** The `subagent/catalog` event carries a versioned fact, and an older engine reading a version-3 fact written by a newer one (for example 0.2.2-rc.3) rejects the whole log as `stored log is corrupt: ... subagent/catalog requires a supported versioned catalog fact`. The mirrored bytes are fine — the reader is too old. Sessions without subagents are usually unaffected. Keep both engines on close versions, or upgrade the older device before opening such a session.
+
 ## Ecosystem and quality
 
 - [Gitee mirror](https://gitee.com/perrylink/dsh-session-sync) (synced mirror; GitHub is canonical)
