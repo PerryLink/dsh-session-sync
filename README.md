@@ -244,6 +244,7 @@ sync: cancelled: approval requires an open turn; /sync commands run between turn
 ## 安全边界
 
 - **绝不静默覆盖。** append-only 三方合并在任何分歧时都保留两边，包括 delete/modify（修改后的字节保留、删除意图被尊重）；fork 文件永不被删除，git 绝不强推、reset、rebase 或切换分支。
+- **独立仓库。** `repoDir` 必须是自身 git 工作树的根：它若只是外层仓库的子目录，插件会在 `repoDir` 初始化独立镜像仓库，绝不把配置、origin 或提交写进外层仓库。
 - **路径收容。** 文件按不透明字节镜像、拒绝符号链接，每次路径拼接都做收容校验（`PATH_UNSAFE` 响亮失败）。
 - **脱敏输出。** 远端 URL 凭据、令牌与 `key=value` 密钥在进入模型或日志前被打码；路径展示拒绝根外路径。
 - **不存凭据。** 插件自身不存凭据；git 凭据由你常规的 git credential helper 管理。age 身份/接收方文件由你管理，密钥绝不进入同步仓库。

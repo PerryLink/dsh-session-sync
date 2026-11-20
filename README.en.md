@@ -244,6 +244,7 @@ Session files are copied as opaque bytes and never parsed; every git command has
 ## Security boundaries
 
 - **Never silently overwrite.** The append-only three-way merge keeps both sides on any divergence, including delete/modify (modified bytes kept, deletion intent honored); fork files are never deleted, and git never force-pushes, resets, rebases, or switches branches.
+- **Dedicated repository.** `repoDir` must be the root of its own git worktree: if it is merely a subdirectory of an unrelated outer repository, the plugin initializes a dedicated mirror repository at `repoDir` and never writes configuration, origin, or commits into the outer repository.
 - **Path containment.** Files are mirrored as opaque bytes with symlinks refused and every joined path containment-checked (`PATH_UNSAFE` fails loud).
 - **Sanitized output.** Remote-URL credentials, tokens, and `key=value` secrets are redacted before reaching the model or the log; path display refuses anything outside its root.
 - **No credential storage.** The plugin stores no credentials; git credentials live in your normal git credential helper. age identities/recipients are yours to manage, and keys never enter the sync repository.
