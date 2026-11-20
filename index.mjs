@@ -340,7 +340,10 @@ export function makeRunAge(subprocess, opts) {
       const executable = await subprocess.resolveExecutable(args[0], undefined, controller.signal)
       const handle = subprocess.spawn({
         argv: [executable, ...args.slice(1)],
-        cwd: runOpts.cwd,
+        // SubprocessSpawnSpec.cwd is required and validated unconditionally on DSH >= 0.2.2; an
+        // undefined cwd aborted every encrypted push/pull with "Cannot read properties of
+        // undefined (reading 'includes')" (#34). Fall back to a real directory.
+        cwd: typeof runOpts.cwd === 'string' && runOpts.cwd.length > 0 ? runOpts.cwd : process.cwd(),
         stdio: {
           stdin: 'ignore',
           stdout: { maxBytes: opts.maxOutputBytes },

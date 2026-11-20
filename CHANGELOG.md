@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.4] - 2026-11-20
+
+### Fixed
+
+- **Encrypted backend failed on every push and pull on DSH >= 0.2.2 because age ran without a `cwd` (#34).** `encryptTree`/`decryptTree` called `ageEncrypt`/`ageDecrypt` without forwarding a `cwd`, and `makeRunAge` forwarded `runOpts.cwd` (undefined) verbatim into `ctx.subprocess.spawn()`. DSH 0.2.2 validates the required `SubprocessSpawnSpec.cwd` unconditionally, so every encrypted push/pull died with `TypeError: Cannot read properties of undefined (reading 'includes')` wrapped as `AGE_FAILED`. The encrypted backend now passes `repoDir` into both tree walkers, `makeRunAge` falls back to `process.cwd()` when a caller omits the cwd, and tests pin both halves (a stubbed runner that requires a cwd for the roundtrip/e2e paths, plus unit coverage for the fallback). The `detectAge` probe already passed `repoDir`, which is why the binary was found and only the encryption step failed.
+
 ## [0.3.1] - 2026-11-14
 
 ### Fixed

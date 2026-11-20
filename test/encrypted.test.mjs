@@ -46,8 +46,11 @@ const GIT_OK = (() => {
 })()
 
 /** mock age runner：--version 探测 + -r/-d 可逆文件变换（加/去头）。 */
-function makeAgeRunner({ present = true } = {}) {
-  return async (args) => {
+function makeAgeRunner({ present = true, requireCwd = false } = {}) {
+  return async (args, runnerOpts = {}) => {
+    if (requireCwd && (typeof runnerOpts?.cwd !== 'string' || runnerOpts.cwd.length === 0)) {
+      throw new Error('age runner was invoked without a cwd')
+    }
     if (args[1] === '--version') {
       return present
         ? { code: 0, stdout: 'v1.0.0\n', stderr: '' }
@@ -108,7 +111,7 @@ test('encrypted backend resolves encrypted mode when age + keys are present', as
     reportError() {},
     onForks() {},
     logger: stubLogger(),
-    run: makeAgeRunner({ present: true }),
+    run: makeAgeRunner({ present: true, requireCwd: true }),
     ageBin: 'age',
     ageRecipient: 'age1mock',
     ageIdentity: 'identity.txt',
@@ -171,8 +174,8 @@ test('encryptTree/decryptTree roundtrip preserves every file byte', async (t) =>
   await fs.mkdir(path.join(plain, 's1'), { recursive: true })
   await fs.writeFile(path.join(plain, 's1', 'log.jsonl'), 'line1\n')
   await fs.writeFile(path.join(plain, 's1', 'blob.bin'), Buffer.from([0x00, 0xff, 0x28]))
-  const run = makeAgeRunner({ present: true })
-  const deps = { run, ageBin: 'age', recipient: 'age1mock', identity: 'identity.txt', timeoutMs: 5000 }
+  const run = makeAgeRunner({ present: true, requireCwd: true })
+  const deps = { run, ageBin: 'age', recipient: 'age1mock', identity: 'identity.txt', timeoutMs: 5000, cwd: root }
 
   const count = await encryptTree(plain, enc, deps)
   assert.equal(count, 2)
