@@ -36,6 +36,10 @@ dsh plugin --profile <name> add dsh-session-sync
 
 ## 它是什么
 
+![dsh-session-sync 真实终端运行](docs/assets/dsh-session-sync-demo.gif)
+
+*本仓库一次真实运行的动图回放。*
+
 `dsh-session-sync` 把 DSH 会话存储（`$DSH_HOME/sessions`）镜像到一个专用 git 工作树，再同步到**你自己**控制的远端：没有云服务，没有第三方存储。会话文件按不透明字节复制，插件从不解析 JSONL/zstd——物理编码属于 harness，插件的职责只是搬运字节、合并 append-only 历史并报告状态。发生分歧时走 append-only 三方合并：**两边都保留**，远端版本留存为 fork 文件，绝不静默覆盖。默认 `backend: git` 是明文镜像；`backend: encrypted` 在镜像之上加一层 age 加密；自动模式全部可配置、可逆。
 
 <p align="center">

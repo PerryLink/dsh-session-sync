@@ -43,6 +43,11 @@ dsh plugin --profile <name> add dsh-session-sync
     <source media="(prefers-color-scheme: dark)" srcset="docs/assets/dsh-session-sync-flow-v5-dark.svg">
     <img src="docs/assets/dsh-session-sync-flow-v5-light.svg" width="100%" alt="dsh-session-sync संरचना: डिवाइस A $DSH_HOME/sessions को बाइट-मिरर और commit करता है, फिर push पुष्टि गेट से होकर आपके git रिमोट तक जाता है; डिवाइस B fetch करता है, प्रति-फ़ाइल तीन-तरफ़ा merge (base/ours/theirs) चलाता है और सत्रों को स्थानीय रूप से पुनर्स्थापित करता है, विचलित रिमोट बाइट्स को मूल पथ पर fork फ़ाइलों के रूप में रखता है; fork फ़ाइलें कभी हटाई या अधिलिखित नहीं होतीं।">
   </picture>
+
+![dsh-session-sync का असली टर्मिनल रन](docs/assets/dsh-session-sync-demo.gif)
+
+*इस रिपॉज़िटरी में दर्ज असली रन का एनिमेटेड रीप्ले।*
+
 </p>
 
 ## तीन चरणों में शुरुआत

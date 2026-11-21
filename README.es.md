@@ -43,6 +43,11 @@ dsh plugin --profile <name> add dsh-session-sync
     <source media="(prefers-color-scheme: dark)" srcset="docs/assets/dsh-session-sync-flow-v5-dark.svg">
     <img src="docs/assets/dsh-session-sync-flow-v5-light.svg" width="100%" alt="Estructura de dsh-session-sync: el dispositivo A copia por bytes y confirma $DSH_HOME/sessions, y el push cruza la puerta de confirmación hacia tu remoto git; el dispositivo B hace fetch, ejecuta un merge de tres vías por archivo (base/ours/theirs) y restaura las sesiones localmente, conservando los bytes remotos divergentes como archivos fork en la ruta original; los archivos fork nunca se borran ni se sobrescriben.">
   </picture>
+
+![dsh-session-sync: ejecución real de terminal](docs/assets/dsh-session-sync-demo.gif)
+
+*Repetición animada de una ejecución real registrada en este repositorio.*
+
 </p>
 
 ## Instalación en tres pasos

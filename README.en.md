@@ -114,6 +114,10 @@ $DSH_HOME/sessions ──mirror──▶ commit ──push──▶ [sessions] �
 
 ### Examples
 
+![dsh-session-sync: real terminal run](docs/assets/dsh-session-sync-demo.gif)
+
+*Animated replay of a real run recorded in this repository.*
+
 These are the plugin's real entry points; install once, then call one.
 
 **Detailed example** — command `/sync help`:

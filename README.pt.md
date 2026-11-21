@@ -43,6 +43,11 @@ O `dsh-session-sync` espelha o armazenamento de sessões do DSH (`$DSH_HOME/sess
     <source media="(prefers-color-scheme: dark)" srcset="docs/assets/dsh-session-sync-flow-v5-dark.svg">
     <img src="docs/assets/dsh-session-sync-flow-v5-light.svg" width="100%" alt="Estrutura do dsh-session-sync: o dispositivo A espelha os bytes e confirma $DSH_HOME/sessions, e o push cruza o portão de confirmação até o seu remoto git; o dispositivo B faz fetch, executa um merge de três vias por arquivo (base/ours/theirs) e restaura as sessões localmente, mantendo os bytes remotos divergentes como arquivos fork no caminho original; arquivos fork nunca são apagados nem sobrescritos.">
   </picture>
+
+![dsh-session-sync: execução real de terminal](docs/assets/dsh-session-sync-demo.gif)
+
+*Repetição animada de uma execução real registrada neste repositório.*
+
 </p>
 
 ## Instalação em três passos
