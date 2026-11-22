@@ -42,6 +42,16 @@ async function makeTemp() {
   return { root, clean: () => fs.rm(root, { recursive: true, force: true }) }
 }
 
+/**
+ * 与 isRepo() 同口径的路径规范化：realpath 消解 macOS 的 /var→/private/var、
+ * Windows 的 8.3 短名与大小写差异（os.tmpdir() 按平台可能给出这三者中任意一种
+ * 非物理形态，而 git --show-toplevel 始终返回物理形态），路径不存在时退回
+ * path.resolve。断言两侧都过这里，比较的才是同一口径的路径。
+ */
+async function canonical(p) {
+  try { return path.resolve(await fs.realpath(p)) } catch { return path.resolve(p) }
+}
+
 function backend(repoDir, remote = 'https://example.com/sync.git') {
   return new GitBackend({
     repoDir,
@@ -65,7 +75,7 @@ async function makeOuter(root) {
   await fs.writeFile(path.join(outer, 'file.txt'), 'outer\n')
   git(outer, 'add', '.')
   git(outer, 'commit', '-m', 'outer commit')
-  assert.equal(path.resolve(git(outer, 'rev-parse', '--show-toplevel')), path.resolve(outer), 'fixture isolation: outer toplevel')
+  assert.equal(await canonical(git(outer, 'rev-parse', '--show-toplevel')), await canonical(outer), 'fixture isolation: outer toplevel')
   return outer
 }
 
@@ -89,7 +99,7 @@ test('bootstrap inside an outer worktree initializes a dedicated repo and never 
 
   // 内层独立仓库：自己的 .git、配置的身份与 origin。
   assert.equal((await fs.stat(path.join(repoDir, '.git'))).isDirectory(), true)
-  assert.equal(path.resolve(git(repoDir, 'rev-parse', '--show-toplevel')), path.resolve(repoDir), 'fixture isolation: inner toplevel')
+  assert.equal(await canonical(git(repoDir, 'rev-parse', '--show-toplevel')), await canonical(repoDir), 'fixture isolation: inner toplevel')
   assert.equal(git(repoDir, 'config', 'user.name'), 'sync-identity')
   assert.equal(git(repoDir, 'remote', 'get-url', 'origin'), 'https://example.com/sync.git')
 })
