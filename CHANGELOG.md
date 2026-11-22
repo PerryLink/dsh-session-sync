@@ -6,6 +6,12 @@
 
 - **A `repoDir` inside an unrelated outer git worktree no longer hijacks the outer repository.** `isRepo()` used `rev-parse --is-inside-work-tree`, which is true for any subdirectory of any worktree, so `ensureRepo()` skipped initialization and wrote the sync identity, `core.autocrlf`, the `origin` remote, and commits into the outer repository (observed: a workspace repo's origin and identity rewritten, a stray whole-tree commit). `isRepo()` now compares `rev-parse --show-toplevel` against `repoDir` by realpath identity: a `repoDir` that is merely a subdirectory of an outer repo takes the init path and gets its own dedicated repository, leaving the outer repo's config, origin, and history untouched. Correctly-placed repoDirs behave exactly as before. Regression tests cover the outer-worktree bootstrap, the root-only `isRepo` semantics, and idempotency. An outer repository that was already hijacked before this fix is not repaired by it: the change affects only the initialization decision, so an outer repo whose `origin`, commit identity, `core.autocrlf`, or history was already written to still needs that cleanup by hand.
 
+## [0.3.4] - 2026-11-20
+
+### Fixed
+
+- **Encrypted backend failed on every push and pull on DSH >= 0.2.2 because age ran without a `cwd` (#34).** `encryptTree`/`decryptTree` called `ageEncrypt`/`ageDecrypt` without forwarding a `cwd`, and `makeRunAge` forwarded `runOpts.cwd` (undefined) verbatim into `ctx.subprocess.spawn()`. DSH 0.2.2 validates the required `SubprocessSpawnSpec.cwd` unconditionally, so every encrypted push/pull died with `TypeError: Cannot read properties of undefined (reading 'includes')` wrapped as `AGE_FAILED`. The encrypted backend now passes `repoDir` into both tree walkers, `makeRunAge` falls back to `process.cwd()` when a caller omits the cwd, and tests pin both halves (a stubbed runner that requires a cwd for the roundtrip/e2e paths, plus unit coverage for the fallback). The `detectAge` probe already passed `repoDir`, which is why the binary was found and only the encryption step failed.
+
 ## [0.3.1] - 2026-11-14
 
 ### Fixed
@@ -125,6 +131,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## [Unreleased]
+
+## [0.3.5] - 2026-11-22
+
+- Compatibility: declare DeepSeek Harness 0.2.3-alpha.1 support (>=0.2.3-0 <0.3.0-0 in engines.dsh and every @deepseek-ai/dsh-* peer range) and refresh README verification stamps.
+
+## [0.3.3] - 2026-11-18
 
 ## [0.2.22] - 2026-10-04
 
