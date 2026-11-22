@@ -11,6 +11,8 @@
 
 DeepSeek Harness के लिए शुद्ध host-side सिंक प्लगइन: सत्र फ़ाइलें अपारदर्शी बाइट्स के रूप में कॉपी होती हैं, विचलन append-only तीन-तरफ़ा merge से सुलझता है, और रिमोट आपका अपना होता है (डिफ़ॉल्ट रूप से plaintext git, वैकल्पिक age एन्क्रिप्शन) — कोई क्लाउड सेवा नहीं, कोई तृतीय-पक्ष संग्रहण नहीं।
 
+अंतिम सत्यापन: DeepSeek Harness `dsh-v0.2.3-alpha.1` (2026-11-22).
+
 [इंस्टॉल](#तीन-चरणों-में-शुरुआत) · [कॉन्फ़िगरेशन](#कॉन्फ़िगरेशन) · [FAQ](#faq) · [简体中文](README.md) · [English](README.en.md) · [Español](README.es.md) · [Português](README.pt.md) · [हिन्दी](README.hi.md)
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-3366CC?style=flat-square&labelColor=2B3245)](LICENSE)

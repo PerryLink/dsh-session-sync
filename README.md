@@ -11,6 +11,8 @@
 
 面向 DeepSeek Harness 的纯主机端同步插件：会话文件按不透明字节复制，append-only 三方合并，远端由你选（默认明文 git，可选 age 加密），无云服务、无第三方存储。
 
+最近一次核验：DeepSeek Harness `dsh-v0.2.3-alpha.1`（2026-11-22）。
+
 [安装](#三步上手) · [配置](#配置) · [FAQ](#faq) · [简体中文](README.md) · [English](README.en.md) · [Español](README.es.md) · [Português](README.pt.md) · [हिन्दी](README.hi.md)
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-3366CC?style=flat-square&labelColor=2B3245)](LICENSE)
