@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Session Sync",
+    "description": "Mirror your session store into a git repository you control — sync across devices, keep both sides on conflict, never lose a turn."
+  }
+}
