@@ -7,6 +7,8 @@
 
 # dsh-session-sync
 
+Current version `0.3.6`.
+
 **Mirror your session store into a git repository you control — sync across devices, keep both sides on conflict, never lose a turn.**
 
 A pure host-side sync plugin for DeepSeek Harness: session files are copied as opaque bytes, divergence is resolved by an append-only three-way merge, and the remote is yours (plaintext git by default, optional age encryption) — no cloud service, no third-party storage.
