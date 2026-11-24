@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- **A `repoDir` inside an unrelated outer git worktree no longer hijacks the outer repository.** `isRepo()` used `rev-parse --is-inside-work-tree`, which is true for any subdirectory of any worktree, so `ensureRepo()` skipped initialization and wrote the sync identity, `core.autocrlf`, the `origin` remote, and commits into the outer repository (observed: a workspace repo's origin and identity rewritten, a stray whole-tree commit). `isRepo()` now compares `rev-parse --show-toplevel` against `repoDir` by realpath identity: a `repoDir` that is merely a subdirectory of an outer repo takes the init path and gets its own dedicated repository, leaving the outer repo's config, origin, and history untouched. Correctly-placed repoDirs behave exactly as before. Regression tests cover the outer-worktree bootstrap, the root-only `isRepo` semantics, and idempotency. An outer repository that was already hijacked before this fix is not repaired by it: the change affects only the initialization decision, so an outer repo whose `origin`, commit identity, `core.autocrlf`, or history was already written to still needs that cleanup by hand.
+
 ## [0.3.4] - 2026-11-20
 
 ### Fixed
@@ -123,8 +129,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Correct the release date in the previous section, which was stamped with the literal string `undefined` by the release stamper. No content or behaviour change; the version is bumped only because npm will not republish an existing version.
 
-
-## [Unreleased]
 
 ## [0.3.6] - 2026-11-22
 

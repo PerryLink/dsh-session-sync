@@ -72,7 +72,7 @@ test('whitelist rejects destructive verbs and force-push arguments', () => {
 
 test('bootstrap sequence: init, identity, remote, initial commit', async () => {
   const { git, calls } = makeGit([
-    { assert: ['rev-parse', '--is-inside-work-tree'], stdout: 'false\n' },
+    { assert: ['rev-parse', '--show-toplevel'], code: 128, stderr: 'not a git repository' },
     { assert: ['init', '-b', 'main'] },
     { assert: ['config', 'core.autocrlf', 'false'] },
     { assert: ['config', 'user.name', 'sync'] },
@@ -92,7 +92,7 @@ test('bootstrap sequence: init, identity, remote, initial commit', async () => {
 
 test('bootstrap keeps existing repo and rewrites a changed remote url', async () => {
   const { git, calls } = makeGit([
-    { stdout: 'true\n' }, // is-inside-work-tree
+    { assert: ['rev-parse', '--show-toplevel'], stdout: '/repo\n' }, // worktree root == repoDir
     { assert: ['config', 'core.autocrlf', 'false'] },
     {}, {}, // identity config
     { stdout: 'https://old.example.com/r.git\n' }, // remote get-url
