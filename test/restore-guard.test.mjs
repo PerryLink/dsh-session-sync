@@ -1,6 +1,8 @@
 // test/restore-guard.test.mjs — 恢复守卫的分支回归（评审第 1 轮产物）。
 // 覆盖：投影字节比较（plan.content 而非镜像原始字节）、活读失败兜底、跳过时
 // 的状态跟踪/占位只读位/旧路径清理、generation-0 名、分叉时的 fork 留存与去重。
+// 宿主活性守卫（#35）另覆盖：持有即不写/不 chmod/不清理、探针抛错按持有、缺省
+// 不接线保持旧行为、id 取自目标父目录、以及 liveSkipped 与 liveAhead/diverged 的分工。
 // 夹具形状沿用 test/cwdmap.test.mjs（真实宿主 header 布局、带 checksum 的 zstd 帧）。
 
 import test from 'node:test'
@@ -438,6 +440,142 @@ test('absent mirrorRoot returns the full zero shape including guard counters', a
   assert.deepEqual(result, {
     restored: 0, unchanged: 0, skipped: 0, tracked: 0,
     cwdMapped: 0, cwdUnmapped: 0, cwdProjectionSkipped: 0,
-    liveAheadSkipped: 0, divergedSkipped: 0,
+    liveAheadSkipped: 0, divergedSkipped: 0, liveSkipped: 0,
   })
+})
+
+// ---------------------------------------------------------------------------
+// 宿主活性守卫（#35）：宿主持有会话时，恢复一律不写、不 chmod、不清理旧副本。
+// 字节前后缀比较只挡截断；重复 seq 由「写在其之下」本身造成。
+// ---------------------------------------------------------------------------
+
+test('a host-held session is never written even when the mirror is strictly ahead (#35)', async (t) => {
+  const f = await mappedFixture(t)
+  const v2 = Buffer.concat([zstdFrame(headerLine()), f.event1, f.event2])
+  await fs.writeFile(f.mirrorPath, v2)
+  const before = await fs.readFile(f.livePath)
+  const second = await restoreSessionRoot({ ...f.deps, isSessionLive: (id) => id === SESSION_ID })
+  assert.equal(second.restored, 0, 'a held session must not be written')
+  assert.equal(second.liveSkipped, 1, 'the hold is counted, never silent')
+  assert.equal(second.liveAheadSkipped, 0)
+  assert.equal(second.divergedSkipped, 0)
+  assert.deepEqual(await fs.readFile(f.livePath), before, 'the live bytes are untouched, so the host seq stays valid')
+  assert.deepEqual(await fs.readFile(f.mirrorPath), v2, 'the mirror keeps its superset for a later pull')
+})
+
+test('the liveness guard is opt-in: without the probe the fast-forward still happens', async (t) => {
+  const f = await mappedFixture(t)
+  const v2 = Buffer.concat([zstdFrame(headerLine()), f.event1, f.event2])
+  await fs.writeFile(f.mirrorPath, v2)
+  const second = await restoreSessionRoot(f.deps)
+  assert.equal(second.restored, 1, 'an unwired probe must not change today behaviour')
+  assert.equal(second.liveSkipped, 0)
+})
+
+test('a host-held diverged log still preserves the mirror side as a fork file', async (t) => {
+  // 平坦夹具（无投影）：分叉判定要落在 plan.content 与活字节之间，投影改写会掩盖分支。
+  const { root, clean } = await makeTemp()
+  t.after(clean)
+  const sessionRoot = path.join(root, 'sessions')
+  const repoDir = path.join(root, 'repo')
+  const mirrorRoot = path.join(repoDir, 'sessions')
+  await fs.mkdir(path.join(repoDir, '.git'), { recursive: true })
+  await fs.mkdir(path.join(mirrorRoot, 's1'), { recursive: true })
+  await fs.mkdir(path.join(sessionRoot, 's1'), { recursive: true })
+  const mirrorPath = path.join(mirrorRoot, 's1', 'session.v4.jsonl')
+  const livePath = path.join(sessionRoot, 's1', 'session.v4.jsonl')
+  const base = Buffer.from('frame-A\n')
+  await fs.writeFile(mirrorPath, base)
+  const deps = { repoDir, mirrorRoot, sessionRoot }
+  assert.equal((await restoreSessionRoot(deps)).restored, 1, 'fixture: both sides start from the same bytes')
+  await fs.writeFile(mirrorPath, Buffer.concat([base, Buffer.from('frame-C\n')]))
+  await fs.writeFile(livePath, Buffer.concat([base, Buffer.from('frame-B\n')]))
+  const second = await restoreSessionRoot({ ...deps, isSessionLive: (id) => id === 's1' })
+  assert.equal(second.restored, 0)
+  assert.equal(second.divergedSkipped, 1, 'the divergence is what gets counted; the hold would skip anyway')
+  assert.equal(second.liveSkipped, 0, 'liveSkipped counts holds that alone would have written')
+  assert.deepEqual(await fs.readFile(livePath), Buffer.concat([base, Buffer.from('frame-B\n')]), 'live bytes survive')
+  const forks = (await fs.readdir(path.join(mirrorRoot, 's1'))).filter(n => FORK_NAME_RE.test(n))
+  assert.equal(forks.length, 1, 'the mirror side must survive for the next push even while held')
+})
+
+test('a host-held session with no local log is not created', async (t) => {
+  const { root, clean } = await makeTemp()
+  t.after(clean)
+  const sessionRoot = path.join(root, 'sessions')
+  const mirrorRoot = path.join(root, 'repo', 'sessions')
+  await fs.mkdir(path.join(sessionRoot, 's1'), { recursive: true })
+  await fs.mkdir(path.join(mirrorRoot, 's1'), { recursive: true })
+  await fs.writeFile(path.join(mirrorRoot, 's1', 'session.v4.jsonl'), 'frame-A\n')
+  const result = await restoreSessionRoot({ sessionRoot, mirrorRoot, isSessionLive: () => true })
+  assert.equal(result.restored, 0)
+  assert.equal(result.liveSkipped, 1, 'an absent target under a live session is still a hold')
+  assert.equal(await fs.stat(path.join(sessionRoot, 's1', 'session.v4.jsonl')).then(() => true, () => false), false, 'the file must not be created')
+})
+
+test('a throwing liveness probe is treated as held (fail-safe: never write)', async (t) => {
+  const f = await mappedFixture(t)
+  const v2 = Buffer.concat([zstdFrame(headerLine()), f.event1, f.event2])
+  await fs.writeFile(f.mirrorPath, v2)
+  const before = await fs.readFile(f.livePath)
+  const second = await restoreSessionRoot({
+    ...f.deps,
+    isSessionLive: () => { throw new Error('host probe failed') },
+  })
+  assert.equal(second.restored, 0, 'a failing probe must not fall through to a write')
+  assert.equal(second.liveSkipped, 1)
+  assert.deepEqual(await fs.readFile(f.livePath), before)
+})
+
+test('the probe is asked about the session id taken from the target parent directory', async (t) => {
+  const f = await mappedFixture(t)
+  const v2 = Buffer.concat([zstdFrame(headerLine()), f.event1, f.event2])
+  await fs.writeFile(f.mirrorPath, v2)
+  // 同目录放一个非日志文件：它不得触发探针（守卫只覆盖会话日志名）。
+  const otherRel = `${projectKey(f.mappedCwd)}/${SESSION_ID}/meta.json`
+  const otherMirrorPath = path.join(f.mirrorRoot, ...otherRel.split('/'))
+  await fs.mkdir(path.dirname(otherMirrorPath), { recursive: true })
+  await fs.writeFile(otherMirrorPath, '{}\n')
+  const seen = []
+  await restoreSessionRoot({ ...f.deps, isSessionLive: (id) => { seen.push(id); return false } })
+  assert.deepEqual([...new Set(seen)], [SESSION_ID], 'one id per session log target, from its parent directory')
+  assert.ok(seen.length >= 1, 'the probe was consulted at all')
+})
+
+test('a host-held legacy copy is not unlinked during projection cleanup', async (t) => {
+  const f = await mappedFixture(t)
+  const grown = Buffer.concat([await fs.readFile(f.livePath), f.event2])
+  await fs.writeFile(f.livePath, grown)
+  const legacyPath = path.join(f.sessionRoot, ...CANONICAL_REL.split('/'))
+  await fs.mkdir(path.dirname(legacyPath), { recursive: true })
+  await fs.writeFile(legacyPath, await fs.readFile(f.mirrorPath))
+  const second = await restoreSessionRoot({ ...f.deps, isSessionLive: () => true })
+  assert.equal(second.liveAheadSkipped, 1)
+  assert.equal(await fs.stat(legacyPath).then(() => true, () => false), true, 'unlinking a live session file is the same hazard as overwriting it')
+})
+
+test('a host-held placeholder is not chmodded', async (t) => {
+  const { root, clean } = await makeTemp()
+  t.after(clean)
+  const sessionRoot = path.join(root, 'sessions')
+  const repoDir = path.join(root, 'repo')
+  const mirrorRoot = path.join(repoDir, 'sessions')
+  await fs.mkdir(path.join(repoDir, '.git'), { recursive: true })
+  const mirrorPath = path.join(mirrorRoot, ...CANONICAL_REL.split('/'))
+  await fs.mkdir(path.dirname(mirrorPath), { recursive: true })
+  await fs.writeFile(mirrorPath, zstdFrame(headerLine()))
+  const deps = { repoDir, mirrorRoot, sessionRoot, cwdMap: normalizeCwdMap([]) }
+  const first = await restoreSessionRoot(deps)
+  assert.equal(first.cwdUnmapped, 1, 'fixture: placeholder created')
+  const placeholderCwd = path.join(sessionRoot, '--unmapped--')
+  const livePath = path.join(sessionRoot, ...`${projectKey(placeholderCwd)}/${SESSION_ID}/session.v4.jsonl.zstd`.split('/'))
+  await fs.chmod(livePath, 0o644)
+  // 活占位日志长过镜像 → 守卫跳过写；持有时连 chmod 也不得碰（宿主拥有该文件）。
+  const grown = Buffer.concat([await fs.readFile(livePath), zstdFrame('{"type":"user/message","seq":1}\n')])
+  await fs.writeFile(livePath, grown)
+  const second = await restoreSessionRoot({ ...deps, isSessionLive: (id) => id === SESSION_ID })
+  assert.equal(second.liveAheadSkipped, 1, 'fixture: the guard skips this write anyway')
+  assert.equal(second.restored, 0)
+  assert.deepEqual(await fs.readFile(livePath), grown, 'live bytes untouched')
+  assert.equal((await fs.stat(livePath)).mode & 0o222, 0o222, 'a held file must not be chmodded (compare the cold case)')
 })
