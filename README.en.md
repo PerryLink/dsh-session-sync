@@ -94,7 +94,7 @@ dsh plugin --profile <name> add dsh-session-sync
 
 - **`/sync` command** — `status` (branch, sanitized remote, ahead/behind, dirty files, forks), `diff`, `log`, `pull`, `push`, `help`.
 - **`sync_status` / `sync_pull` / `sync_push` tools** — the same surface for the model, inside a turn.
-- **Append-only conflict resolution** — session logs are append-only; on any divergence the plugin keeps **both** sides (local version kept, remote version preserved as fork files) and never silently overwrites. Diverged sessions can also fork at the session level.
+- **Append-only conflict resolution** — session logs are append-only; on any divergence the plugin keeps **both** sides (local version kept, remote version preserved as fork files) and never silently overwrites. Diverged sessions can also fork at the session level. The restore into the live store re-checks every existing session log immediately before writing: a live log that grew past the mirror during the pull, or diverged from it, is left untouched and reported as a warning; on divergence the mirror bytes are preserved as a fork file, so the next push carries both sides to the remote. Only a strictly ahead mirror fast-forwards, and never while the host still holds the session: a log held live is skipped entirely and reported, because any write beneath a live host leaves its in-memory seq stale and the next append duplicates seq values and corrupts the log (#35).
 - **Auto modes** — pull on start, push after every closed turn, and periodic pull, all configurable and all reversible.
 - **Confirmation-gated writes** — `pull`/`push` ask first (through `userQuestions` or `approval`); read-only surfaces never ask; with no answerer the operation fails closed.
 

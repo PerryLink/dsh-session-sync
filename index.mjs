@@ -724,6 +724,9 @@ export function apply(ctx, config = {}) {
     reportError,
     logger,
     onForks: (forkPaths) => handleForks(forkPaths),
+    // #35 活性守卫：宿主对活会话按其内存 seq 追加，恢复写在其之下会造出重复 seq。
+    // get(id) 命中即宿主持有该会话（与 handleForks 同一判定，index.mjs:765）。
+    isSessionLive: (id) => ctx.sessions.get(id) !== undefined,
   }
   const engine = resolved.backend === BACKENDS.ENCRYPTED
     ? new EncryptedBackend({

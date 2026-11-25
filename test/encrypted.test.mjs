@@ -194,7 +194,9 @@ test('encrypted end-to-end: push, pull, append-both fork over real git', { skip:
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'dsh-session-sync-e2e-'))
   t.after(() => removeTree(root))
   const remotePath = path.join(root, 'remote.git')
-  spawnSync('git', ['init', '--bare', remotePath], { stdio: 'ignore' })
+  // --initial-branch: 裸远端的 HEAD 必须与设备推送的分支同名，否则 `git show HEAD:`
+  // 在 init.defaultBranch 不是 main 的环境（CI 把 HOME 指向临时目录）里读到空。
+  spawnSync('git', ['init', '--bare', '--initial-branch=main', remotePath], { stdio: 'ignore' })
 
   const eventsA = { meta: [], errors: [], forks: [] }
   const eventsB = { meta: [], errors: [], forks: [] }

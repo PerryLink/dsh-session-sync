@@ -3,6 +3,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import path from 'node:path'
+import { FORK_NAME_RE } from '../lib/constants.mjs'
 import {
   resolveSessionRoot,
   resolveRepoDir,
@@ -56,7 +57,12 @@ test('fork file names are normalized and never collide on timestamp/device', () 
     'log.jsonl.remote-fork-20260815120000-a1b2c3d4',
   )
   assert.equal(forkFileName('log', 'bad-stamp', 'SHORT'), 'log.remote-fork-19700101000000-short')
-  assert.equal(forkFileName('log', '20260815120000', 'x'.repeat(20)), 'log.remote-fork-20260815120000-unknown')
+  // 回退名必须 8 位：FORK_NAME_RE 要能认出 forkFileName 产生的任何名字。
+  const fallback = forkFileName('log', '20260815120000', 'x'.repeat(20))
+  assert.equal(fallback, 'log.remote-fork-20260815120000-unknown0')
+  assert.equal(FORK_NAME_RE.test(fallback), true)
+  assert.equal(FORK_NAME_RE.test(forkFileName('log', '20260815120000', 'ab')), true, 'short device ids stay recognized')
+  assert.equal(FORK_NAME_RE.test(`${fallback}.2`), true, 'collision suffixes stay recognized')
 })
 
 // 生成口径（engine.mjs / encrypted.mjs）= ISO 剔除 `-`/`:`/`T` 后截断 14 位。
