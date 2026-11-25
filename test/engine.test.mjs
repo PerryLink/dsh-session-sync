@@ -86,7 +86,9 @@ test('engine end-to-end: push, adopt, append-both fork, diverged fork, rejected 
   const { root, clean } = await makeTemp()
   t.after(clean)
   const remotePath = path.join(root, 'remote.git')
-  spawnSync('git', ['init', '--bare', remotePath], { stdio: 'ignore' })
+  // --initial-branch: 裸远端的 HEAD 必须与设备推送的分支同名，否则 `git show HEAD:`
+  // 在 init.defaultBranch 不是 main 的环境（CI 把 HOME 指向临时目录）里读到空。
+  spawnSync('git', ['init', '--bare', '--initial-branch=main', remotePath], { stdio: 'ignore' })
 
   const eventsA = { meta: [], errors: [], forks: [] }
   const eventsB = { meta: [], errors: [], forks: [] }
@@ -172,7 +174,9 @@ test('engine fork paths carry the host project/session layout and map to the ses
   const { root, clean } = await makeTemp()
   t.after(clean)
   const remotePath = path.join(root, 'remote.git')
-  spawnSync('git', ['init', '--bare', remotePath], { stdio: 'ignore' })
+  // --initial-branch: 裸远端的 HEAD 必须与设备推送的分支同名，否则 `git show HEAD:`
+  // 在 init.defaultBranch 不是 main 的环境（CI 把 HOME 指向临时目录）里读到空。
+  spawnSync('git', ['init', '--bare', '--initial-branch=main', remotePath], { stdio: 'ignore' })
   const eventsA = { meta: [], errors: [], forks: [] }
   const eventsB = { meta: [], errors: [], forks: [] }
   const a = await setupDevice(root, 'A', 'aaaaaaaa', remotePath, eventsA)
@@ -243,7 +247,9 @@ test('engine status reports dirty mirror and fork files', { skip: !GIT_OK && 'gi
   const { root, clean } = await makeTemp()
   t.after(clean)
   const remotePath = path.join(root, 'remote.git')
-  spawnSync('git', ['init', '--bare', remotePath], { stdio: 'ignore' })
+  // --initial-branch: 裸远端的 HEAD 必须与设备推送的分支同名，否则 `git show HEAD:`
+  // 在 init.defaultBranch 不是 main 的环境（CI 把 HOME 指向临时目录）里读到空。
+  spawnSync('git', ['init', '--bare', '--initial-branch=main', remotePath], { stdio: 'ignore' })
   const events = { meta: [], errors: [], forks: [] }
   const device = await setupDevice(root, 'Y', 'dddddddd', remotePath, events)
   await writeSession(device.sessionRoot, 's1/log.jsonl', 'a\n')
@@ -266,7 +272,9 @@ test('engine delete/modify conflicts stay keep-both instead of aborting the pull
   const { root, clean } = await makeTemp()
   t.after(clean)
   const remotePath = path.join(root, 'remote.git')
-  spawnSync('git', ['init', '--bare', remotePath], { stdio: 'ignore' })
+  // --initial-branch: 裸远端的 HEAD 必须与设备推送的分支同名，否则 `git show HEAD:`
+  // 在 init.defaultBranch 不是 main 的环境（CI 把 HOME 指向临时目录）里读到空。
+  spawnSync('git', ['init', '--bare', '--initial-branch=main', remotePath], { stdio: 'ignore' })
 
   const eventsA = { meta: [], errors: [], forks: [] }
   const eventsB = { meta: [], errors: [], forks: [] }
@@ -319,7 +327,9 @@ test('a pulled session survives every later sync, while real deletions still pro
   const { root, clean } = await makeTemp()
   t.after(clean)
   const remotePath = path.join(root, 'remote.git')
-  spawnSync('git', ['init', '--bare', remotePath], { stdio: 'ignore' })
+  // --initial-branch: 裸远端的 HEAD 必须与设备推送的分支同名，否则 `git show HEAD:`
+  // 在 init.defaultBranch 不是 main 的环境（CI 把 HOME 指向临时目录）里读到空。
+  spawnSync('git', ['init', '--bare', '--initial-branch=main', remotePath], { stdio: 'ignore' })
 
   const eventsA = { meta: [], errors: [], forks: [] }
   const eventsB = { meta: [], errors: [], forks: [] }
@@ -367,7 +377,9 @@ test('a live log that grows during the pull window is never truncated by the res
   const { root, clean } = await makeTemp()
   t.after(clean)
   const remotePath = path.join(root, 'remote.git')
-  spawnSync('git', ['init', '--bare', remotePath], { stdio: 'ignore' })
+  // --initial-branch: 裸远端的 HEAD 必须与设备推送的分支同名，否则 `git show HEAD:`
+  // 在 init.defaultBranch 不是 main 的环境（CI 把 HOME 指向临时目录）里读到空。
+  spawnSync('git', ['init', '--bare', '--initial-branch=main', remotePath], { stdio: 'ignore' })
 
   const eventsA = { meta: [], errors: [], forks: [] }
   const eventsB = { meta: [], errors: [], forks: [] }
@@ -415,7 +427,9 @@ test('a diverged restore keeps both sides at the remote tip on the next push', {
   const { root, clean } = await makeTemp()
   t.after(clean)
   const remotePath = path.join(root, 'remote.git')
-  spawnSync('git', ['init', '--bare', remotePath], { stdio: 'ignore' })
+  // --initial-branch: 裸远端的 HEAD 必须与设备推送的分支同名，否则 `git show HEAD:`
+  // 在 init.defaultBranch 不是 main 的环境（CI 把 HOME 指向临时目录）里读到空。
+  spawnSync('git', ['init', '--bare', '--initial-branch=main', remotePath], { stdio: 'ignore' })
 
   const eventsA = { meta: [], errors: [], forks: [] }
   const eventsB = { meta: [], errors: [], forks: [] }

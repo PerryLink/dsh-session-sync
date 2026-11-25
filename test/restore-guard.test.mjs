@@ -573,9 +573,12 @@ test('a host-held placeholder is not chmodded', async (t) => {
   // 活占位日志长过镜像 → 守卫跳过写；持有时连 chmod 也不得碰（宿主拥有该文件）。
   const grown = Buffer.concat([await fs.readFile(livePath), zstdFrame('{"type":"user/message","seq":1}\n')])
   await fs.writeFile(livePath, grown)
+  // 平台中立：Windows 的 chmod 语义与 POSIX 不同（0o644 在 POSIX 只置属主写位），
+  // 所以比较「恢复前后的同一个 mode」，而不是某个具体写位掩码。
+  const modeBeforeRestore = (await fs.stat(livePath)).mode
   const second = await restoreSessionRoot({ ...deps, isSessionLive: (id) => id === SESSION_ID })
   assert.equal(second.liveAheadSkipped, 1, 'fixture: the guard skips this write anyway')
   assert.equal(second.restored, 0)
   assert.deepEqual(await fs.readFile(livePath), grown, 'live bytes untouched')
-  assert.equal((await fs.stat(livePath)).mode & 0o222, 0o222, 'a held file must not be chmodded (compare the cold case)')
+  assert.equal((await fs.stat(livePath)).mode, modeBeforeRestore, 'a held file must not be chmodded (compare the cold case)')
 })
